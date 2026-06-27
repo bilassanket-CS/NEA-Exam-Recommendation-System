@@ -1,0 +1,17 @@
+{
+  "name": "exam-question-recommendation-system",
+  "version": "1.0.0",
+  "description": "Adaptive exam-question recommendation system (OCR A Level NEA). Recommendation engine, REST API and web UI with zero external dependencies.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node --no-warnings src/server.js",
+    "dev": "node --no-warnings --watch src/server.js",
+    "test": "node --no-warnings --test",
+    "seed": "node --no-warnings -e \"import('./src/db/database.js').then(async m=>{const {seed}=await import('./src/db/seed.js');const db=new m.Database(process.env.DB_FILE||'data.db');if(db.getTopics().length===0){seed(db);console.log('seeded');}else{console.log('already seeded');}})\""
+  },
+  "keywords": ["education", "recommendation-system", "spaced-repetition", "elo", "ocr-nea"],
+  "license": "MIT"
+}
