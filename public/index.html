@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exam Question Recommendation System</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Exam Question Recommendation System</h1>
+    <p class="subtitle">Adaptive revision &middot; weak-topic targeting &middot; spaced repetition</p>
+  </header>
+
+  <nav class="tabs">
+    <button id="tab-practice" class="tab active" data-tab="practice">Practice</button>
+    <button id="tab-dashboard" class="tab" data-tab="dashboard">Dashboard</button>
+  </nav>
+
+  <main>
+    <!-- Practice -->
+    <section id="practice" class="panel active">
+      <div id="rec-meta" class="meta"></div>
+      <div id="question-card" class="card hidden">
+        <div class="reasons" id="reasons"></div>
+        <p class="prompt" id="prompt"></p>
+        <div class="options" id="options"></div>
+        <div class="actions">
+          <button id="submit-btn" disabled>Submit answer</button>
+          <button id="skip-btn" class="ghost">Next question</button>
+        </div>
+        <div id="feedback" class="feedback hidden"></div>
+      </div>
+      <p id="practice-empty" class="muted hidden">No questions available. Add some in the database seed.</p>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboard" class="panel">
+      <div class="readiness">
+        <div>
+          <div class="readiness-value" id="readiness">0%</div>
+          <div class="muted">Estimated readiness</div>
+        </div>
+        <div>
+          <div class="readiness-value" id="due">0</div>
+          <div class="muted">Questions due for review</div>
+        </div>
+        <div>
+          <div class="readiness-value" id="rating">1200</div>
+          <div class="muted">Ability rating (Elo)</div>
+        </div>
+      </div>
+      <h2>Mastery by topic</h2>
+      <div id="topics"></div>
+    </section>
+  </main>
+
+  <footer>
+    <span id="student-label">Student: &mdash;</span>
+    <span class="muted">Built for an OCR A Level NEA &middot; no external dependencies</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
