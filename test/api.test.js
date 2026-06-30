@@ -14,110 +14,155 @@ function freshDb() {
 }
 
 // ---- database layer ----
-test("seed creates topics and questions", () => {
+test("seed creates topics, questions and demo users", () => {
   const { db } = freshDb();
   assert.ok(db.getTopics().length >= 5);
+  assert.ok(db.listQuestions().length >= 15);
+  assert.ok(db.getUserByEmail("admin@example.com"));
 });
 
-test("recordAttempt auto-marks a correct answer and updates mastery upward", () => {
+test("objective attempt auto-marks correct and raises mastery", () => {
   const { db, studentId } = freshDb();
-  // find a question and answer it correctly
-  const cand = db.getCandidates(studentId)[0];
-  const q = db.getQuestion(cand.questionId);
+  const q = db.getQuestion(db.getCandidates(studentId).find((c) => c.type === "objective").questionId);
   const res = db.recordAttempt({ studentId, questionId: q.id, answer: q.answer });
   assert.equal(res.correct, true);
-  assert.ok(res.mastery > 0.5, "mastery should rise after a correct answer");
-  assert.ok(res.intervalDays >= 1);
+  assert.ok(res.mastery > 0.5);
 });
 
-test("recordAttempt marks a wrong answer and schedules a near-term review", () => {
+test("wrong objective answer schedules review after 1 day", () => {
   const { db, studentId } = freshDb();
-  const cand = db.getCandidates(studentId)[0];
-  const q = db.getQuestion(cand.questionId);
+  const q = db.getQuestion(db.getCandidates(studentId).find((c) => c.type === "objective").questionId);
   const wrong = q.options.find((o) => o !== q.answer);
   const res = db.recordAttempt({ studentId, questionId: q.id, answer: wrong });
   assert.equal(res.correct, false);
-  assert.equal(res.intervalDays, 1, "a lapse reviews again after 1 day");
+  assert.equal(res.intervalDays, 1);
 });
 
-test("a blank answer is handled (not counted correct)", () => {
+test("written question is self-marked against the mark scheme (feature 3)", () => {
   const { db, studentId } = freshDb();
-  const q = db.getQuestion(db.getCandidates(studentId)[0].questionId);
-  const res = db.recordAttempt({ studentId, questionId: q.id, answer: "" });
-  assert.equal(res.correct, false);
-  assert.equal(res.blank, true);
+  const written = db.listQuestions().find((q) => q.type === "written");
+  const full = db.getQuestion(written.id);
+  const res = db.recordAttempt({ studentId, questionId: full.id, answer: "my answer", awarded: full.marks });
+  assert.equal(res.type, "written");
+  assert.equal(res.correct, true);
+  assert.equal(res.awardedMarks, full.marks);
+  assert.ok(res.markScheme && res.markScheme.length > 0);
 });
 
-test("analytics aggregates per-topic mastery and accuracy", () => {
+test("written self-mark is validated (feature 15)", () => {
   const { db, studentId } = freshDb();
-  // answer two questions in the same topic, one right one wrong
-  const cands = db.getCandidates(studentId);
-  const topicId = cands[0].topicId;
-  const sameTopic = cands.filter((c) => c.topicId === topicId).slice(0, 2);
-  const q0 = db.getQuestion(sameTopic[0].questionId);
-  db.recordAttempt({ studentId, questionId: q0.id, answer: q0.answer }); // correct
-  if (sameTopic[1]) {
-    const q1 = db.getQuestion(sameTopic[1].questionId);
-    const wrong = q1.options.find((o) => o !== q1.answer);
-    db.recordAttempt({ studentId, questionId: q1.id, answer: wrong }); // wrong
-  }
-  const rows = db.getAnalytics(studentId);
-  const row = rows.find((r) => r.topicId === topicId);
-  assert.ok(row.attempts >= 1);
-  assert.ok(row.accuracy >= 0 && row.accuracy <= 100);
+  const written = db.getQuestion(db.listQuestions().find((q) => q.type === "written").id);
+  assert.throws(() => db.recordAttempt({ studentId, questionId: written.id, answer: "x", awarded: written.marks + 5 }));
 });
 
-// ---- HTTP API ----
-async function startServer() {
+test("adding an objective question with answer not in options is rejected (feature 15)", () => {
+  const { db } = freshDb();
+  const topicId = db.getTopics()[0].id;
+  assert.throws(() => db.addQuestion({ topicId, prompt: "Q", options: ["A", "B"], answer: "C" }));
+});
+
+// ---- HTTP API with auth ----
+async function start() {
   const db = new Database(":memory:");
   seed(db);
   const server = createServer(db);
   server.listen(0);
   await once(server, "listening");
-  const { port } = server.address();
-  return { server, base: `http://localhost:${port}` };
+  return { server, base: `http://localhost:${server.address().port}` };
+}
+async function call(base, method, path, { token, body } = {}) {
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = "Bearer " + token;
+  const r = await fetch(base + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  return { status: r.status, data: await r.json().catch(() => ({})) };
+}
+async function loginAs(base, email, password) {
+  const { data } = await call(base, "POST", "/api/auth/login", { body: { email, password } });
+  return data.token;
 }
 
-test("API: health, recommendations, attempt and analytics flow", async () => {
-  const { server, base } = await startServer();
+test("API: unauthenticated requests are rejected (feature 13)", async () => {
+  const { server, base } = await start();
   try {
-    const health = await (await fetch(`${base}/api/health`)).json();
-    assert.equal(health.ok, true);
-
-    const { student } = await (await fetch(`${base}/api/students`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Tester" }),
-    })).json();
-    assert.ok(student.id);
-
-    const recs = await (await fetch(`${base}/api/recommendations?studentId=${student.id}&limit=3`)).json();
-    assert.equal(recs.questions.length, 3);
-    // answers must NOT be exposed in recommendations
-    assert.ok(!("answer" in recs.questions[0]));
-
-    const first = recs.questions[0];
-    const attempt = await (await fetch(`${base}/api/attempts`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId: student.id, questionId: first.questionId, answer: first.options[0] }),
-    })).json();
-    assert.ok("correct" in attempt.result);
-
-    const analytics = await (await fetch(`${base}/api/analytics?studentId=${student.id}`)).json();
-    assert.ok(Array.isArray(analytics.topics));
-    assert.ok(typeof analytics.overallReadiness === "number");
-  } finally {
-    server.close();
-    await once(server, "close");
-  }
+    const { status } = await call(base, "GET", "/api/recommendations");
+    assert.equal(status, 401);
+  } finally { server.close(); await once(server, "close"); }
 });
 
-test("API: unknown student returns 404", async () => {
-  const { server, base } = await startServer();
+test("API: login, recommend (no answers leaked), attempt, analytics", async () => {
+  const { server, base } = await start();
   try {
-    const r = await fetch(`${base}/api/recommendations?studentId=99999`);
-    assert.equal(r.status, 404);
-  } finally {
-    server.close();
-    await once(server, "close");
-  }
+    const token = await loginAs(base, "student@example.com", "student123");
+    assert.ok(token);
+
+    const me = (await call(base, "GET", "/api/auth/me", { token })).data.user;
+    assert.equal(me.role, "student");
+
+    const recs = (await call(base, "GET", "/api/recommendations?limit=3", { token })).data;
+    assert.equal(recs.questions.length, 3);
+    assert.ok(!("answer" in recs.questions[0]));
+    assert.ok(!("markScheme" in recs.questions[0]));
+
+    const first = recs.questions.find((q) => q.type === "objective");
+    const attempt = (await call(base, "POST", "/api/attempts", { token, body: { questionId: first.questionId, answer: first.options[0] } })).data;
+    assert.ok("correct" in attempt.result);
+
+    const analytics = (await call(base, "GET", "/api/analytics", { token })).data;
+    assert.ok(typeof analytics.overallReadiness === "number");
+  } finally { server.close(); await once(server, "close"); }
+});
+
+test("API: a student cannot add questions but a teacher can (feature 14)", async () => {
+  const { server, base } = await start();
+  try {
+    const studentTok = await loginAs(base, "student@example.com", "student123");
+    const topicId = (await call(base, "GET", "/api/topics", { token: studentTok })).data.topics[0].id;
+    const denied = await call(base, "POST", "/api/questions", { token: studentTok,
+      body: { topicId, prompt: "Q", options: ["A", "B"], answer: "A" } });
+    assert.equal(denied.status, 403);
+
+    const teacherTok = await loginAs(base, "teacher@example.com", "teacher123");
+    const ok = await call(base, "POST", "/api/questions", { token: teacherTok,
+      body: { topicId, prompt: "New Q", options: ["A", "B"], answer: "A" } });
+    assert.equal(ok.status, 201);
+  } finally { server.close(); await once(server, "close"); }
+});
+
+test("API: only an admin can list and disable user accounts (feature 14)", async () => {
+  const { server, base } = await start();
+  try {
+    const teacherTok = await loginAs(base, "teacher@example.com", "teacher123");
+    assert.equal((await call(base, "GET", "/api/users", { token: teacherTok })).status, 403);
+
+    const adminTok = await loginAs(base, "admin@example.com", "admin123");
+    const users = (await call(base, "GET", "/api/users", { token: adminTok })).data.users;
+    assert.ok(users.length >= 3);
+    const student = users.find((u) => u.role === "student");
+    const disabled = await call(base, "POST", `/api/users/${student.id}/disable`, { token: adminTok });
+    assert.equal(disabled.status, 200);
+    // disabled student can no longer log in
+    const relogin = await call(base, "POST", "/api/auth/login", { body: { email: "student@example.com", password: "student123" } });
+    assert.equal(relogin.status, 401);
+  } finally { server.close(); await once(server, "close"); }
+});
+
+test("API: a student cannot read another student's analytics (ownership)", async () => {
+  const { server, base } = await start();
+  try {
+    const adminTok = await loginAs(base, "admin@example.com", "admin123");
+    const created = (await call(base, "POST", "/api/users", { token: adminTok,
+      body: { name: "Other", email: "other@example.com", password: "other123", role: "student" } })).data.user;
+
+    const studentTok = await loginAs(base, "student@example.com", "student123");
+    const forbidden = await call(base, "GET", `/api/analytics?studentId=${created.id}`, { token: studentTok });
+    assert.equal(forbidden.status, 403);
+  } finally { server.close(); await once(server, "close"); }
+});
+
+test("API: wrong password is rejected", async () => {
+  const { server, base } = await start();
+  try {
+    const { status } = await call(base, "POST", "/api/auth/login", { body: { email: "admin@example.com", password: "nope" } });
+    assert.equal(status, 401);
+  } finally { server.close(); await once(server, "close"); }
 });

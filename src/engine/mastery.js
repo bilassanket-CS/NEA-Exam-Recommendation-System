@@ -40,3 +40,15 @@ export function readiness(topics) {
 function clamp01(x) {
   return Math.max(0, Math.min(1, x));
 }
+
+/**
+ * Update mastery toward a continuous outcome in [0,1] (used for written
+ * questions self-marked as a fraction of the available marks). For objective
+ * questions the outcome is simply 1 or 0, giving the same behaviour as
+ * updateMastery above.
+ */
+export function updateMasteryValue(previous, outcome, alpha = DEFAULT_ALPHA) {
+  if (alpha <= 0 || alpha > 1) throw new RangeError("alpha must be in (0,1]");
+  if (outcome < 0 || outcome > 1) throw new RangeError("outcome must be in [0,1]");
+  return clamp01(previous + alpha * (outcome - previous));
+}

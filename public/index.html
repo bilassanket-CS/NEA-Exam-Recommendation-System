@@ -12,52 +12,104 @@
     <p class="subtitle">Adaptive revision &middot; weak-topic targeting &middot; spaced repetition</p>
   </header>
 
-  <nav class="tabs">
-    <button id="tab-practice" class="tab active" data-tab="practice">Practice</button>
-    <button id="tab-dashboard" class="tab" data-tab="dashboard">Dashboard</button>
-  </nav>
-
-  <main>
-    <!-- Practice -->
-    <section id="practice" class="panel active">
-      <div id="rec-meta" class="meta"></div>
-      <div id="question-card" class="card hidden">
-        <div class="reasons" id="reasons"></div>
-        <p class="prompt" id="prompt"></p>
-        <div class="options" id="options"></div>
-        <div class="actions">
-          <button id="submit-btn" disabled>Submit answer</button>
-          <button id="skip-btn" class="ghost">Next question</button>
-        </div>
-        <div id="feedback" class="feedback hidden"></div>
+  <!-- Login / register -->
+  <section id="auth" class="panel active">
+    <div class="card auth-card">
+      <h2 id="auth-title">Sign in</h2>
+      <label>Email <input id="email" type="email" autocomplete="username" /></label>
+      <label>Password <input id="password" type="password" autocomplete="current-password" /></label>
+      <label id="name-field" class="hidden">Name <input id="name" type="text" /></label>
+      <div id="auth-error" class="feedback wrong hidden"></div>
+      <div class="actions">
+        <button id="auth-submit">Sign in</button>
+        <button id="auth-toggle" class="ghost">Create student account</button>
       </div>
-      <p id="practice-empty" class="muted hidden">No questions available. Add some in the database seed.</p>
-    </section>
+      <p class="muted">Demo logins: student@example.com / student123 &middot; teacher@example.com / teacher123 &middot; admin@example.com / admin123</p>
+    </div>
+  </section>
 
-    <!-- Dashboard -->
-    <section id="dashboard" class="panel">
-      <div class="readiness">
-        <div>
-          <div class="readiness-value" id="readiness">0%</div>
-          <div class="muted">Estimated readiness</div>
+  <!-- App (after login) -->
+  <div id="app" class="hidden">
+    <nav class="tabs">
+      <button class="tab active" data-tab="practice">Practice</button>
+      <button class="tab" data-tab="dashboard">Dashboard</button>
+      <button class="tab hidden" id="tab-admin" data-tab="admin">Admin</button>
+      <button class="tab ghost-tab" id="logout">Log out</button>
+    </nav>
+
+    <main>
+      <!-- Practice -->
+      <section id="practice" class="panel active">
+        <div id="rec-meta" class="meta"></div>
+        <div id="question-card" class="card hidden">
+          <div class="reasons" id="reasons"></div>
+          <p class="prompt" id="prompt"></p>
+          <div class="options" id="options"></div>
+          <textarea id="written-answer" class="hidden" rows="4" placeholder="Type your answer, then reveal the mark scheme to self-mark."></textarea>
+          <div id="markscheme" class="markscheme hidden"></div>
+          <div id="selfmark" class="selfmark hidden">
+            <label>Marks you award yourself: <input id="awarded" type="number" min="0" step="1" /></label>
+          </div>
+          <div class="actions">
+            <button id="reveal-btn" class="hidden">Reveal mark scheme</button>
+            <button id="submit-btn" disabled>Submit answer</button>
+            <button id="skip-btn" class="ghost">Next question</button>
+          </div>
+          <div id="feedback" class="feedback hidden"></div>
         </div>
-        <div>
-          <div class="readiness-value" id="due">0</div>
-          <div class="muted">Questions due for review</div>
+        <p id="practice-empty" class="muted hidden">No questions available.</p>
+      </section>
+
+      <!-- Dashboard -->
+      <section id="dashboard" class="panel">
+        <div class="readiness">
+          <div><div class="readiness-value" id="readiness">0%</div><div class="muted">Estimated readiness</div></div>
+          <div><div class="readiness-value" id="due">0</div><div class="muted">Due for review</div></div>
+          <div><div class="readiness-value" id="rating">1200</div><div class="muted">Ability rating (Elo)</div></div>
         </div>
-        <div>
-          <div class="readiness-value" id="rating">1200</div>
-          <div class="muted">Ability rating (Elo)</div>
+        <h2>Mastery by topic</h2>
+        <div id="topics"></div>
+      </section>
+
+      <!-- Admin (teacher/admin only) -->
+      <section id="admin" class="panel">
+        <h2>Add a question</h2>
+        <div class="card">
+          <label>Topic <select id="q-topic"></select></label>
+          <label>Sub-topic <input id="q-sub" type="text" /></label>
+          <label>Type
+            <select id="q-type"><option value="objective">Objective (auto-marked)</option><option value="written">Written (self-marked)</option></select>
+          </label>
+          <label>Prompt <input id="q-prompt" type="text" /></label>
+          <div id="objective-fields">
+            <label>Options (comma-separated) <input id="q-options" type="text" placeholder="A, B, C, D" /></label>
+            <label>Correct answer <input id="q-answer" type="text" /></label>
+          </div>
+          <div id="written-fields" class="hidden">
+            <label>Mark scheme <textarea id="q-markscheme" rows="3"></textarea></label>
+          </div>
+          <label>Marks <input id="q-marks" type="number" min="1" value="1" /></label>
+          <div class="actions"><button id="add-question">Add question</button></div>
+          <div id="admin-msg" class="feedback hidden"></div>
         </div>
-      </div>
-      <h2>Mastery by topic</h2>
-      <div id="topics"></div>
-    </section>
-  </main>
+
+        <h2 id="users-heading">User accounts</h2>
+        <div id="users" class="card"></div>
+        <div class="card" id="create-user-card">
+          <h3>Create account</h3>
+          <label>Name <input id="u-name" type="text" /></label>
+          <label>Email <input id="u-email" type="email" /></label>
+          <label>Password <input id="u-pass" type="password" /></label>
+          <label>Role <select id="u-role"><option>student</option><option>teacher</option><option>admin</option></select></label>
+          <div class="actions"><button id="create-user">Create account</button></div>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <footer>
-    <span id="student-label">Student: &mdash;</span>
-    <span class="muted">Built for an OCR A Level NEA &middot; no external dependencies</span>
+    <span id="user-label">&mdash;</span>
+    <span class="muted">OCR A Level NEA &middot; no external dependencies</span>
   </footer>
 
   <script src="app.js"></script>

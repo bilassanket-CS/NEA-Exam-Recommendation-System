@@ -19,12 +19,25 @@ node --version
 # Run the app (serves the API and web UI on http://localhost:3000)
 npm start
 # then open http://localhost:3000
+#
+# Demo logins (created automatically):
+#   student@example.com / student123   (practise + dashboard)
+#   teacher@example.com / teacher123   (add/edit questions, class analytics)
+#   admin@example.com   / admin123     (manage accounts + content)
 
 # Run the automated tests
 npm test
 ```
 
 There is nothing to install — there are no third-party packages.
+
+### Demo accounts (seeded on first run)
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Student | student@example.com | student123 |
+| Teacher | teacher@example.com | teacher123 |
+| Admin | admin@example.com | admin123 |
 
 By default the server uses an **in-memory** database that is re-seeded each run.
 To keep data between runs, set a file:
@@ -38,8 +51,11 @@ DB_FILE=data.db npm start
 ## What it does
 
 - **Question bank** tagged by topic and difficulty (OCR-style Computer Science seed data).
-- **Practice**: the UI requests a recommended question, the student answers, and the
-  answer is **auto-marked** with instant feedback.
+- **Accounts and roles**: users log in (passwords hashed with scrypt). Three roles —
+  **student**, **teacher**, **admin** — see different screens (role-based access).
+- **Practice**: the UI requests a recommended question, the student answers, and
+  **objective** answers are **auto-marked**; **written** answers are **self-marked**
+  against a revealed mark scheme.
 - **Recommendation engine** chooses the next questions by combining three signals:
   weak-topic priority, due-for-review (spaced repetition), and difficulty match.
 - **Dashboard**: per-topic mastery bars, accuracy, ability rating and an overall
@@ -75,8 +91,14 @@ schedule and both Elo ratings together. All SQL is **parameterised**.
 
 ## API
 
+Protected endpoints require an `Authorization: Bearer <token>` header obtained from `/api/auth/login`.
+
+
 | Method & path | Purpose |
 | --- | --- |
+| `POST /api/auth/register` | Self-register a student `{ name, email, password }`; returns a token. |
+| `POST /api/auth/login` | Log in `{ email, password }`; returns a token. |
+| `GET /api/auth/me` | Current user (from the Bearer token). |
 | `GET /api/health` | Liveness check. |
 | `GET /api/topics` | List topics. |
 | `POST /api/students` | Create a student `{ name }`. |
@@ -84,7 +106,13 @@ schedule and both Elo ratings together. All SQL is **parameterised**.
 | `GET /api/recommendations?studentId=&limit=` | Ranked next questions (no answers). |
 | `POST /api/attempts` | Submit `{ studentId, questionId, answer }`; auto-marks + updates models. |
 | `GET /api/analytics?studentId=` | Per-topic mastery/accuracy + readiness + due count. |
-| `POST /api/questions` | Admin: add a question. |
+| `GET /api/recommendations?limit=` | Ranked next questions for the logged-in student (no answers). |
+| `GET /api/students` | Teacher/admin: list students. |
+| `GET /api/questions` | Teacher/admin: list questions. |
+| `POST /api/questions` | Teacher/admin: add a question (objective or written). |
+| `PUT /api/questions/:id` | Teacher/admin: edit/tag a question. |
+| `GET /api/questions/:id/markscheme` | Reveal a written question's mark scheme (for self-marking). |
+| `GET /api/users` `POST /api/users` `PATCH /api/users/:id/active` | Admin: manage user accounts. |
 
 ## Testing
 
@@ -132,5 +160,6 @@ A helper script is included: `bash scripts/push-to-github.sh YOUR-USERNAME repo-
   multi-table parameterised SQL with aggregation, and a transactional write path.
 - **Design**: see `docs/DESIGN.md` (success criteria, data model, algorithm design).
 - **Testing**: see `docs/TESTPLAN.md` and the `test/` suite (normal, boundary, erroneous).
+- **Feature list**: see `docs/Features.md` for all 15 features and where each is implemented.
 
 > Educational project. Not affiliated with any exam board.

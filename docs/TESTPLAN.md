@@ -28,6 +28,15 @@ through the HTTP API. All tests are automated with Node's built-in runner: `npm 
 | T19 | Full API flow | Normal | Health, recommend, attempt, analytics succeed; no answer leaked | api.test |
 | T20 | Unknown student | Erroneous | API returns 404 | api.test |
 
+| T21 | Password hashing | Normal | Correct password verifies, wrong one fails; salts differ | auth.test |
+| T22 | Short password | Erroneous | Rejected | auth.test |
+| T23 | Written self-marking | Normal | Full marks pass, zero marks fail; mark scheme returned | api.test |
+| T24 | Login + disabled account | Normal/Erroneous | Token resolves to user; disabled user cannot log in | api.test |
+| T25 | Edit/tag a question | Normal | Sub-topic and marks update | api.test |
+| T26 | Unauthenticated API call | Erroneous | Returns 401 | api.test |
+| T27 | Role-based access | Erroneous/Normal | Student gets 403 on content/admin routes; teacher/admin allowed | api.test |
+| T28 | Written self-marking over HTTP | Normal | Mark scheme returned after attempt; pass recorded | api.test |
+
 ## Manual / user-acceptance checks
 
 | Step | What to do | Expected |
