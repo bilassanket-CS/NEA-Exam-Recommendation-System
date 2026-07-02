@@ -1,75 +1,69 @@
 # Test Plan
 
-Testing uses **normal**, **boundary** and **erroneous** data, together with
-integration testing through the HTTP API and user-acceptance testing. All
-automated tests are run with Node's built-in test runner using `npm test`; at the
-time of writing **34 tests pass**. The tables below are written in the third
-person: each entry states what is tested, the type of data used, the result that
-should be produced, and the file in which the test is automated. Every criterion
-is treated as met only if the stated test passes.
+Testing uses normal, boundary and erroneous data, together with integration tests
+through the HTTP API. All automated tests are run with Node's built-in runner
+(`npm test`); the suite currently contains 34 passing tests. The descriptions
+below are written in the third person: they state what should be done and what
+should then be observed, rather than giving instructions.
 
 ## Automated test matrix
 
-| # | What is tested | Data type | Expected result | Automated in |
-| --- | --- | --- | --- | --- |
-| T1 | SM-2, first two correct reviews | Normal | The interval produced should be 1 day for the first review and 6 days for the second. | spacedRepetition.test.js |
-| T2 | SM-2, third correct review | Normal | The interval should equal the previous interval multiplied by the easiness factor, and should increase. | spacedRepetition.test.js |
-| T3 | SM-2 lapse (a wrong answer after progress) | Normal | The repetition count and interval should be reset, and the next review should fall after 1 day. | spacedRepetition.test.js |
-| T4 | Repeated failures | Boundary | The easiness factor should never fall below 1.3. | spacedRepetition.test.js |
-| T5 | An invalid quality value | Erroneous | A range error should be raised. | spacedRepetition.test.js |
-| T6 | Elo, equal ratings | Normal | The expected score should be 0.5. | engine.test.js |
-| T7 | Elo, a correct and a wrong attempt | Normal | The student rating should rise on a correct answer and fall on a wrong one, and the question rating should move in the opposite direction. | engine.test.js |
-| T8 | Mastery bounds | Boundary | The mastery value should move toward 1 on correct answers and toward 0 on wrong ones, and should remain within 0 to 1. | engine.test.js |
-| T9 | Weakest-topic ordering | Normal | The topics should be ordered from weakest to strongest. | engine.test.js |
-| T10 | Priority queue ordering | Normal | The items should be returned in descending priority order. | engine.test.js |
-| T11 | Recommender, weak-topic priority | Normal | A question from the weaker topic should be ranked first, all else being equal. | engine.test.js |
-| T12 | Recommender, due-for-review priority | Normal | An overdue question should be ranked ahead of one that is not yet due. | engine.test.js |
-| T13 | Recommender, limit and reasons | Boundary | No more than the requested number of questions should be returned, and each should carry at least one reason. | engine.test.js |
-| T14 | Collaborative filtering | Normal | Unseen questions linked to wrongly answered ones should be suggested, and already-attempted questions should be excluded. | engine.test.js |
-| T15 | Password hashing and verification | Normal | A password should verify against its own hash and should be rejected against a wrong one. | auth.test.js |
-| T16 | Password salting | Boundary | The same password hashed twice should produce two different hashes. | auth.test.js |
-| T17 | A password that is too short | Erroneous | An error should be raised. | auth.test.js |
-| T18 | Seeding of the database | Normal | At least five topics, fifteen questions and the three demo accounts should be created. | api.test.js |
-| T19 | Objective auto-marking | Normal | A correct answer should be marked correct and the topic mastery should rise. | api.test.js |
-| T20 | A wrong objective answer | Normal | The answer should be marked incorrect and the question should be scheduled for review after 1 day. | api.test.js |
-| T21 | Written self-marking | Normal | The self-awarded marks should be recorded, the mark scheme should be returned, and the same mastery, spaced-repetition and difficulty models should be updated as for objective questions. | api.test.js |
-| T22 | A written mark outside the valid range | Erroneous | The submission should be rejected. | api.test.js |
-| T23 | An objective answer that is not one of the options | Erroneous | Adding the question should be rejected. | api.test.js |
-| T24 | An unauthenticated request | Erroneous | The request should be rejected with status 401. | api.test.js |
-| T25 | The full authenticated flow | Normal | Login, recommendation, attempt and analytics should all succeed, and neither the answer nor the mark scheme should appear in the recommendations. | api.test.js |
-| T26 | Role enforcement for content | Erroneous / Normal | A student should be refused when adding a question (403), while a teacher should be allowed to add one (201). | api.test.js |
-| T27 | Account management restricted to admins | Erroneous / Normal | A teacher should be refused the user list (403); an admin should be able to list and disable accounts; and a disabled account should no longer be able to log in. | api.test.js |
-| T28 | Ownership of data | Erroneous | A student should be refused access to another student's analytics (403). | api.test.js |
-| T29 | An incorrect password | Erroneous | Login should be rejected with status 401. | api.test.js |
+| # | Area | What is checked | Data type | Expected result | File |
+| --- | --- | --- | --- | --- | --- |
+| SR1 | Spaced repetition | The first two correct reviews of a question | Normal | The intervals produced are 1 day and then 6 days | spacedRepetition.test.js |
+| SR2 | Spaced repetition | A third correct review | Normal | The interval grows to the previous interval multiplied by the easiness factor | spacedRepetition.test.js |
+| SR3 | Spaced repetition | A wrong answer after earlier progress | Erroneous | The repetition count resets and the interval returns to 1 day | spacedRepetition.test.js |
+| SR4 | Spaced repetition | Repeated failures on one item | Boundary | The easiness factor never falls below 1.3 | spacedRepetition.test.js |
+| SR5 | Spaced repetition | A quality score outside 0 to 5 | Erroneous | A RangeError is raised | spacedRepetition.test.js |
+| SR6 | Spaced repetition | The mapping from an attempt to a quality score | Normal | Correct, incorrect and blank map to the expected quality values | spacedRepetition.test.js |
+| E1 | Elo difficulty | Two equal ratings | Normal | The expected score is 0.5 | engine.test.js |
+| E2 | Elo difficulty | A correct and a wrong attempt | Normal | The student rating rises then falls, with the question rating moving oppositely | engine.test.js |
+| M1 | Mastery | A correct answer, then many wrong answers | Normal / Boundary | Mastery rises, then approaches 0, always staying within 0 to 1 | engine.test.js |
+| M2 | Mastery | The weakest-topic ordering | Normal | Topics are ordered from lowest to highest mastery | engine.test.js |
+| M3 | Mastery | The readiness calculation | Normal | The average mastery is returned as a percentage | engine.test.js |
+| H1 | Priority queue | A mix of priorities pushed onto the heap | Normal | Values are returned in descending priority order | engine.test.js |
+| R1 | Recommender | A weak topic against a strong one, all else equal | Normal | The weak-topic question is ranked first | engine.test.js |
+| R2 | Recommender | An overdue review against a future one | Normal | The overdue question is ranked first | engine.test.js |
+| R3 | Recommender | More candidates than the requested limit | Boundary | Exactly the limit is returned, each with reasons | engine.test.js |
+| C1 | Collaborative filtering | Cosine similarity of basic vectors | Normal / Boundary | The values 1, 0 and 0 (for a zero vector) are returned | engine.test.js |
+| C2 | Collaborative filtering | Recommendation from previously wrong answers | Normal | A linked unseen question is suggested and attempted ones are excluded | engine.test.js |
+| A1 | Authentication | A password hashed and then verified | Normal | The correct password verifies and a wrong one does not | auth.test.js |
+| A2 | Authentication | The same password hashed twice | Normal | The two hashes differ because the salts differ | auth.test.js |
+| A3 | Authentication | A very short password | Erroneous | It is rejected | auth.test.js |
+| A4 | Authentication | Token generation | Normal | Tokens are unique and non-empty | auth.test.js |
+| D1 | Database | The seed routine | Normal | At least 5 topics, at least 15 questions and the demo users are created | api.test.js |
+| D2 | Database | A correct objective attempt | Normal | It is marked correct and mastery rises | api.test.js |
+| D3 | Database | A wrong objective attempt | Normal | It is marked wrong and the review is scheduled after 1 day | api.test.js |
+| D4 | Database | A written question self-marked at full marks | Normal | The marks are recorded and the mark scheme is returned | api.test.js |
+| D5 | Database | A written self-mark above the maximum | Erroneous | It is rejected | api.test.js |
+| D6 | Database | An objective question whose answer is not among the options | Erroneous | It is rejected when the question is added | api.test.js |
+| P1 | HTTP API | A request without a valid token | Erroneous | 401 (authentication required) is returned | api.test.js |
+| P2 | HTTP API | The login, recommend, attempt and analytics flow | Normal | The flow succeeds and neither answers nor mark schemes are leaked | api.test.js |
+| P3 | HTTP API | A student adding a question | Erroneous | 403 is returned, whereas a teacher succeeds with 201 | api.test.js |
+| P4 | HTTP API | A non-admin listing accounts | Erroneous | 403 is returned; an admin can list and disable, and the disabled user can no longer log in | api.test.js |
+| P5 | HTTP API | A student reading another student's analytics | Erroneous | 403 (forbidden) is returned | api.test.js |
+| P6 | HTTP API | A login with the wrong password | Erroneous | 401 is returned | api.test.js |
 
-These automated tests map onto the fifteen success criteria: T1–T5 cover spaced
-repetition (criterion 6), T6–T7 cover difficulty (criterion 5), T8 covers mastery
-(criterion 4), T11–T14 cover the recommender and explainability (criteria 7 and 8),
-T15–T17 and T24–T25 cover authentication (criterion 13), T19–T23 cover marking and
-validation (criteria 2, 3 and 15), and T26–T28 cover role-based access and ownership
-(criterion 14).
+## Manual and user-acceptance checks
 
-## Manual / user-acceptance testing
+These checks are carried out by an end user (a student and, separately, a teacher).
+Each row states what should be done and what should then be observed.
 
-| # | Procedure | Expected result |
+| # | What should be done | Expected result |
 | --- | --- | --- |
-| U1 | The application should be started with `npm start`, opened in a browser, and signed into with the demo student account. | The practice screen should appear, showing a recommended question together with the reasons for its selection. |
-| U2 | Several questions in a single topic should be answered incorrectly. | That topic should fall on the dashboard and should then be recommended more often. |
-| U3 | A series of questions should be answered correctly. | The ability rating and the readiness figure should both rise. |
-| U4 | The dashboard should be opened. | The mastery bars, accuracy, ability rating and due count should be displayed. |
-| U5 | A written question should be answered and self-marked against the mark scheme. | The awarded marks should be recorded and the next review should be scheduled. |
-| U6 | The teacher and admin accounts should be signed into in turn. | The teacher should be able to add and edit questions; the admin should additionally be able to manage accounts; and a student should have neither ability. |
-| U7 | The page should be refreshed after signing in. | The session should persist, so that the same user remains signed in. |
+| U1 | The application should be started with `npm start` and opened in a browser. | The sign-in page is shown. |
+| U2 | A demo student account should be signed in to. | The Practice tab shows a recommended question together with the reasons it was chosen. |
+| U3 | Several questions in one topic should be answered incorrectly. | That topic falls on the dashboard and is recommended more often. |
+| U4 | A number of questions should then be answered correctly. | The ability rating and the readiness figure rise. |
+| U5 | A written question should be answered and self-marked against the mark scheme. | The awarded marks are recorded and the question is rescheduled for review. |
+| U6 | The teacher account should be signed in to, and a new question added and tagged. | The question appears in the bank and can subsequently be recommended. |
+| U7 | The admin account should be signed in to, and a student account disabled. | The disabled student can no longer sign in. |
+| U8 | The page should be refreshed. | The signed-in session persists, because the token is stored in the browser. |
 
-## Running the tests
+Each success criterion in the Success Criteria table maps to one or more of the
+tests above, so that the criteria, the tests and the results can be traced together.
 
-The full suite is run with:
-
-```bash
-npm test
-```
-
-A single file can be run with:
+## Running a single test file
 
 ```bash
 node --no-warnings --test test/spacedRepetition.test.js
