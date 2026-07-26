@@ -163,3 +163,4 @@ A helper script is included: `bash scripts/push-to-github.sh YOUR-USERNAME repo-
 - **Feature list**: see `docs/Features.md` for all 15 features and where each is implemented.
 
 > Educational project. Not affiliated with any exam board.
+# NEA-Exam-Recommendation-System
