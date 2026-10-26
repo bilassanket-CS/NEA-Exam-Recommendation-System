@@ -1,0 +1,52 @@
+name: Deploy to examprep.sanketbilas.online
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Zero-dependency project (see package.json) — no `npm ci`/build step needed,
+      # the checked-out source is deployed as-is.
+      - name: Sync files to cPanel via SSH
+        uses: easingthemes/ssh-deploy@v5
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          REMOTE_HOST: ${{ vars.DEPLOY_HOST }}
+          REMOTE_PORT: ${{ vars.DEPLOY_PORT }}
+          REMOTE_USER: ${{ vars.DEPLOY_USER }}
+          TARGET: ${{ vars.DEPLOY_PATH }}
+          ARGS: >-
+            -avzr --delete
+            --exclude='.git/'
+            --exclude='.github/'
+            --exclude='node_modules/'
+            --exclude='data.db'
+            --exclude='.env'
+
+      # Passenger restarts the app when tmp/restart.txt's mtime changes.
+      - name: Restart the Passenger app
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.DEPLOY_HOST }}
+          port: ${{ vars.DEPLOY_PORT }}
+          username: ${{ vars.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            mkdir -p "${{ vars.DEPLOY_PATH }}/tmp"
+            touch "${{ vars.DEPLOY_PATH }}/tmp/restart.txt"

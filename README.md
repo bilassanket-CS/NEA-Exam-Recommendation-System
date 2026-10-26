@@ -154,6 +154,26 @@ git push -u origin main
 
 A helper script is included: `bash scripts/push-to-github.sh YOUR-USERNAME repo-name`.
 
+## Deploying to examprep.sanketbilas.online
+
+`.github/workflows/deploy.yml` runs the test suite, then syncs this repo over SSH to
+the cPanel-hosted Node.js App (Phusion Passenger, `passenger.js` as the startup file)
+on every push to `main`, and restarts it by touching `tmp/restart.txt`.
+
+It needs these set under **Settings → Secrets and variables → Actions** on GitHub
+(never commit these values):
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `DEPLOY_SSH_KEY` | Secret | Private half of an SSH key authorised in cPanel's SSH Access tool |
+| `DEPLOY_HOST` | Variable | `s19429.lon1.stableserver.net` |
+| `DEPLOY_PORT` | Variable | The SSH port shown on cPanel's SSH Access page |
+| `DEPLOY_USER` | Variable | `sanketbi` |
+| `DEPLOY_PATH` | Variable | `/home/sanketbi/examprep.sanketbilas.online` |
+
+The deploy excludes `.git/`, `.github/`, `node_modules/`, `data.db` and `.env`, so a
+live server-side database file is never overwritten by a push.
+
 ## Mapping to the NEA
 
 - **Complexity**: own algorithms (SM-2, Elo, ranking), a from-scratch max-heap,
