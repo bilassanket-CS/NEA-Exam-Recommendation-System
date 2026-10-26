@@ -1,6 +1,6 @@
 # Features
 
-The Exam Question Recommendation System implements the fifteen essential features
+StudyTrackr implements the fifteen essential features
 identified in the Analysis. Each feature below is described and then mapped to the
 part of the codebase that provides it, so the implementation can be checked against
 the design. All features run with **zero external dependencies** (Node.js built-ins

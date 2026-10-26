@@ -3,17 +3,90 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Exam Question Recommendation System</title>
+  <title>StudyTrackr</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header>
-    <h1>Exam Question Recommendation System</h1>
+  <header id="site-header">
+    <h1>StudyTrackr</h1>
     <p class="subtitle">Adaptive revision &middot; weak-topic targeting &middot; spaced repetition</p>
   </header>
 
+  <!-- Marketing landing page (default view) -->
+  <section id="landing" class="panel active landing">
+    <nav class="landing-nav">
+      <span class="landing-logo">StudyTrackr.</span>
+      <button id="landing-nav-login" class="btn btn-outline-orange">Log in</button>
+    </nav>
+
+    <section class="landing-hero">
+      <h1>Revise the topics you <span class="landing-accent-text">actually</span> need to work on</h1>
+      <p class="landing-sub">StudyTrackr watches how you are doing and keeps serving questions from your
+        weakest topics, so no minute of practice is wasted.</p>
+      <div class="landing-cta-row">
+        <button id="landing-hero-register" class="btn btn-solid-orange">Create an account</button>
+        <button id="landing-hero-login" class="btn btn-outline-white">I already have an account</button>
+      </div>
+    </section>
+
+    <section class="landing-section">
+      <h2>Why it works</h2>
+      <p class="landing-sub landing-center">A focused way to practise that adapts to you, instead of handing
+        out the same questions to everyone.</p>
+      <div class="landing-grid">
+        <div class="landing-card">
+          <span class="landing-eyebrow">Adaptive</span>
+          <h3>Targets your weak spots</h3>
+          <p class="landing-muted">The next question is always drawn from the topic where you are scoring
+            lowest, so you spend time where it counts.</p>
+        </div>
+        <div class="landing-card">
+          <span class="landing-eyebrow">Clear</span>
+          <h3>See your progress</h3>
+          <p class="landing-muted">A bar for every topic and an overall readiness estimate show exactly how
+            ready you are.</p>
+        </div>
+        <div class="landing-card">
+          <span class="landing-eyebrow">Shared</span>
+          <h3>Built for students and teachers</h3>
+          <p class="landing-muted">Students practise while teachers add questions and watch each student's
+            progress across every topic.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-section landing-section-alt">
+      <h2>How it works</h2>
+      <div class="landing-grid">
+        <div class="landing-card">
+          <span class="landing-eyebrow">Step one</span>
+          <h3>Sign in</h3>
+          <p class="landing-muted">Create an account or log in with your student or teacher details.</p>
+        </div>
+        <div class="landing-card">
+          <span class="landing-eyebrow">Step two</span>
+          <h3>Answer questions</h3>
+          <p class="landing-muted">Work through questions picked for you and see the correct answer each
+            time.</p>
+        </div>
+        <div class="landing-card">
+          <span class="landing-eyebrow">Step three</span>
+          <h3>Track and improve</h3>
+          <p class="landing-muted">Watch your topic scores climb as your weaker areas get more practice.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-section landing-final">
+      <h2>Ready to start revising?</h2>
+      <p class="landing-sub landing-center">Create an account and answer your first question in under a
+        minute.</p>
+      <button id="landing-final-register" class="btn btn-solid-orange">Create your account</button>
+    </section>
+  </section>
+
   <!-- Login / register -->
-  <section id="auth" class="panel active">
+  <section id="auth" class="panel">
     <div class="card auth-card">
       <h2 id="auth-title">Sign in</h2>
       <label>Email <input id="email" type="email" autocomplete="username" /></label>

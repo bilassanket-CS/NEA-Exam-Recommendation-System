@@ -1,7 +1,7 @@
 # Features
 
-This file outlines the **15 essential features** of the Exam Question Recommendation
-System (from the NEA Analysis) and shows where each one is implemented in the codebase.
+This file outlines the **15 essential features** of StudyTrackr (from the NEA Analysis)
+and shows where each one is implemented in the codebase.
 All fifteen are implemented and covered by automated tests (`npm test`).
 
 | # | Feature | Status | Implemented in |

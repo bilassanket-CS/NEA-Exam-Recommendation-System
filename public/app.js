@@ -23,23 +23,39 @@ const api = {
 init();
 
 async function init() {
+  wireLanding();
   wireAuth();
   if (token) {
     try { currentUser = (await api.get("/api/auth/me")).user; showApp(); }
-    catch { token = null; localStorage.removeItem("token"); showAuth(); }
-  } else showAuth();
+    catch { token = null; localStorage.removeItem("token"); showLanding(); }
+  } else showLanding();
+}
+
+// ---------- landing ----------
+function wireLanding() {
+  document.getElementById("landing-nav-login").onclick = () => showAuth("login");
+  document.getElementById("landing-hero-login").onclick = () => showAuth("login");
+  document.getElementById("landing-hero-register").onclick = () => showAuth("register");
+  document.getElementById("landing-final-register").onclick = () => showAuth("register");
+}
+function showLanding() {
+  document.getElementById("landing").classList.add("active");
+  document.getElementById("auth").classList.remove("active");
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("site-header").classList.add("hidden");
 }
 
 // ---------- auth ----------
 let registering = false;
+function setAuthMode(isRegister) {
+  registering = isRegister;
+  document.getElementById("auth-title").textContent = registering ? "Create student account" : "Sign in";
+  document.getElementById("auth-submit").textContent = registering ? "Create account" : "Sign in";
+  document.getElementById("auth-toggle").textContent = registering ? "I already have an account" : "Create student account";
+  document.getElementById("name-field").classList.toggle("hidden", !registering);
+}
 function wireAuth() {
-  document.getElementById("auth-toggle").addEventListener("click", () => {
-    registering = !registering;
-    document.getElementById("auth-title").textContent = registering ? "Create student account" : "Sign in";
-    document.getElementById("auth-submit").textContent = registering ? "Create account" : "Sign in";
-    document.getElementById("auth-toggle").textContent = registering ? "I already have an account" : "Create student account";
-    document.getElementById("name-field").classList.toggle("hidden", !registering);
-  });
+  document.getElementById("auth-toggle").addEventListener("click", () => setAuthMode(!registering));
   document.getElementById("auth-submit").addEventListener("click", doAuth);
   document.getElementById("logout").addEventListener("click", logout);
 }
@@ -55,21 +71,26 @@ async function doAuth() {
 }
 function logout() {
   token = null; currentUser = null; localStorage.removeItem("token");
-  showAuth();
+  showLanding();
 }
 function showAuthError(msg) {
   const el = document.getElementById("auth-error");
   el.textContent = msg; el.classList.remove("hidden");
 }
-function showAuth() {
+function showAuth(mode) {
+  if (mode === "login" || mode === "register") setAuthMode(mode === "register");
+  document.getElementById("landing").classList.remove("active");
   document.getElementById("auth").classList.add("active");
   document.getElementById("app").classList.add("hidden");
+  document.getElementById("site-header").classList.remove("hidden");
 }
 
 // ---------- app shell ----------
 function showApp() {
+  document.getElementById("landing").classList.remove("active");
   document.getElementById("auth").classList.remove("active");
   document.getElementById("app").classList.remove("hidden");
+  document.getElementById("site-header").classList.remove("hidden");
   document.getElementById("user-label").textContent = `${currentUser.name} (${currentUser.role})`;
   const staff = currentUser.role === "teacher" || currentUser.role === "admin";
   document.getElementById("tab-admin").classList.toggle("hidden", !staff);

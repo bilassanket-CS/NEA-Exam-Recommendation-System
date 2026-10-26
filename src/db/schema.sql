@@ -1,5 +1,5 @@
 -- src/db/schema.sql
--- Relational schema for the Exam Question Recommendation System.
+-- Relational schema for StudyTrackr.
 -- Linked tables queried with multi-table JOINs + aggregation; writing an attempt
 -- updates several tables inside one transaction. All access is parameterised.
 

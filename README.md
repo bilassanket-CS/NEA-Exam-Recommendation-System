@@ -1,4 +1,4 @@
-# Exam Question Recommendation System
+# StudyTrackr
 
 An adaptive revision platform that holds a bank of exam-style questions, tests the
 student, and **recommends the next questions that will help them most** — targeting

@@ -132,7 +132,7 @@ async function serveStatic(req, res, pathname) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === normalize(process.argv[1])) {
   const port = process.env.PORT || 3000;
   createServer().listen(port, () => {
-    console.log(`Exam Question Recommendation System running at http://localhost:${port}`);
+    console.log(`StudyTrackr running at http://localhost:${port}`);
     console.log("Demo logins: student@example.com/student123, teacher@example.com/teacher123, admin@example.com/admin123");
   });
 }
