@@ -47,7 +47,7 @@ main { max-width: 760px; margin: 0 auto; padding: 20px; }
 .options { display: grid; gap: 10px; }
 .option {
   text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 10px;
-  padding: 12px 14px; cursor: pointer; font-size: 0.98rem;
+  padding: 12px 14px; cursor: pointer; font-size: 0.98rem; color: var(--ink);
 }
 .option:hover { border-color: var(--accent); }
 .option.selected { border-color: var(--accent); background: #eef2f8; }
@@ -86,7 +86,8 @@ footer {
 .authpanel { display: none; flex-direction: column; gap: 10px; margin-top: 12px; }
 .authpanel.active { display: flex; }
 label { display: block; font-size: 0.9rem; color: var(--ink); margin-bottom: 4px; }
-input, textarea, select { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; margin-top: 3px; }
+input, textarea, select { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; margin-top: 3px;color: var(--ink);
+background: #fff; }
 .error { color: var(--bad); font-size: 0.9rem; min-height: 1.1em; }
 .small { font-size: 0.78rem; }
 .markscheme { margin-top: 12px; padding: 12px; background: #f3f6fb; border-radius: 8px; font-size: 0.95rem; }
@@ -106,7 +107,8 @@ button.link { background: none; border: none; color: var(--accent); cursor: poin
 .auth-card label, .card label { display: block; margin: 10px 0; font-size: 0.9rem; color: var(--ink); }
 .auth-card input, .card input, .card select, .card textarea, #written-answer {
   width: 100%; padding: 9px 11px; margin-top: 4px; border: 1px solid var(--line);
-  border-radius: 8px; font: inherit; box-sizing: border-box;
+  border-radius: 8px; font: inherit; box-sizing: border-box;color: var(--ink);
+background: #fff;
 }
 #written-answer { margin-top: 12px; }
 .markscheme { margin-top: 14px; padding: 12px 14px; background: #eef2f8; border-radius: 10px; font-size: 0.92rem; white-space: pre-wrap; }
