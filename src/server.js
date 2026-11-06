@@ -51,6 +51,10 @@ export function createServer(database) {
 
         // ---- reference ----
         if (route === "GET /api/topics") return send(res, 200, h.getTopics(db));
+        const practiceMatch = pathname.match(/^\/api\/questions\/(\d+)\/practice$/);
+        if (req.method === "GET" && practiceMatch) {
+          return send(res, 200, h.getQuestionForPractice(db, Number(practiceMatch[1]), user));
+        }
 
         // ---- site theme ----
         if (route === "GET /api/theme") return send(res, 200, h.getTheme(db));

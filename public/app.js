@@ -160,12 +160,24 @@ async function loadQuestion() {
   resetCard();
   const data = await api.get(`/api/recommendations?studentId=${currentUser.id}&limit=1`);
   if (!data.questions.length) { document.getElementById("practice-empty").classList.remove("hidden"); return; }
-  current = data.questions[0];
+  const q = data.questions[0];
+  renderQuestion(q, { score: q.score, reasons: q.reasons });
+}
+/** Jump straight to a specific question (used by the "try a similar question"
+ *  shortcut shown after a wrong answer). */
+async function loadSpecificQuestion(questionId) {
+  resetCard();
+  const q = await api.get(`/api/questions/${questionId}/practice`);
+  renderQuestion(q, { reasons: ["similar to a question you recently got wrong"] });
+}
+function renderQuestion(q, { score, reasons = [] } = {}) {
+  current = q;
   document.getElementById("question-card").classList.remove("hidden");
   document.getElementById("prompt").textContent = current.prompt;
-  document.getElementById("reasons").innerHTML = current.reasons.map((r) => `<span>${esc(r)}</span>`).join("");
-  document.getElementById("rec-meta").textContent =
-    `Recommended (score ${current.score}) \u00b7 ${current.type} \u00b7 ${current.marks} mark(s)`;
+  document.getElementById("reasons").innerHTML = reasons.map((r) => `<span>${esc(r)}</span>`).join("");
+  document.getElementById("rec-meta").textContent = score != null
+    ? `Recommended (score ${score}) \u00b7 ${current.type} \u00b7 ${current.marks} mark(s)`
+    : `${current.type} \u00b7 ${current.marks} mark(s)`;
 
   if (current.type === "written") {
     document.getElementById("written-answer").classList.remove("hidden");
@@ -223,10 +235,39 @@ async function submit() {
       ? `Correct! Next review in ${result.intervalDays} day(s).`
       : `Not quite. Correct answer: ${result.correctAnswer}.`;
   }
+  renderRelatedResource(result);
+}
+/** Stage 4: show the retrieved real OCR mark-scheme excerpt and "try a
+ *  similar question" shortcuts that submitAttempt attaches on a wrong answer. */
+function renderRelatedResource(result) {
+  const resBlock = document.getElementById("related-resource");
+  if (result.relatedResource) {
+    document.getElementById("related-resource-source").textContent = result.relatedResource.sourceTitle;
+    document.getElementById("related-resource-text").textContent = result.relatedResource.excerptText;
+    document.getElementById("related-resource-link").href = result.relatedResource.sourceUrl;
+    resBlock.classList.remove("hidden");
+  } else {
+    resBlock.classList.add("hidden");
+  }
+
+  const simBlock = document.getElementById("similar-questions");
+  if (result.similarQuestions && result.similarQuestions.length) {
+    const list = document.getElementById("similar-questions-list");
+    list.innerHTML = "";
+    result.similarQuestions.forEach((qid, i) => {
+      const b = document.createElement("button");
+      b.className = "ghost small"; b.textContent = `Similar question ${i + 1}`;
+      b.onclick = () => loadSpecificQuestion(qid);
+      list.appendChild(b);
+    });
+    simBlock.classList.remove("hidden");
+  } else {
+    simBlock.classList.add("hidden");
+  }
 }
 function resetCard() {
-  ["question-card", "practice-empty", "feedback", "written-answer", "markscheme", "selfmark"].forEach((id) =>
-    document.getElementById(id).classList.add("hidden"));
+  ["question-card", "practice-empty", "feedback", "written-answer", "markscheme", "selfmark",
+    "related-resource", "similar-questions"].forEach((id) => document.getElementById(id).classList.add("hidden"));
   document.getElementById("reveal-btn").classList.add("hidden");
   document.getElementById("submit-btn").disabled = true;
   document.getElementById("written-answer").value = "";

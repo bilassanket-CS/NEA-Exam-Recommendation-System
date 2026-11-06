@@ -99,6 +99,9 @@ export class Database {
   getTopics() {
     return this.db.prepare("SELECT id, name FROM topics ORDER BY id").all();
   }
+  getTopicById(id) {
+    return this.db.prepare("SELECT id, name FROM topics WHERE id = ?").get(id);
+  }
 
   addQuestion({ topicId, subTopic = null, type = "objective", prompt, options = [],
                 answer = "", markScheme = null, difficulty = 1200, marks = 1 }) {
@@ -161,7 +164,8 @@ export class Database {
   getCandidates(studentId) {
     const rows = this.db.prepare(
       `SELECT q.id AS questionId, q.topic_id AS topicId, q.type AS type,
-              q.difficulty_rating AS questionRating,
+              q.difficulty_rating AS questionRating, q.sub_topic AS subTopic,
+              q.prompt AS prompt, q.marks AS marks,
               COALESCE(st.mastery, 0.5) AS mastery,
               rs.due_date AS dueDate, rs.last_correct AS lastCorrect
        FROM questions q
@@ -171,10 +175,51 @@ export class Database {
     ).all(studentId, studentId);
     return rows.map((r) => ({
       questionId: r.questionId, topicId: r.topicId, type: r.type,
-      questionRating: r.questionRating, mastery: r.mastery,
+      questionRating: r.questionRating, subTopic: r.subTopic, prompt: r.prompt, marks: r.marks,
+      mastery: r.mastery,
       dueDate: r.dueDate ?? null,
       lastCorrect: r.lastCorrect == null ? null : !!r.lastCorrect,
     }));
+  }
+
+  // ---- Stage 2/3 ML recommender support -----------------------------------
+  countAttempts() {
+    return this.db.prepare("SELECT COUNT(*) AS n FROM attempts").get().n;
+  }
+  /** All attempts in chronological order, joined with the question fields the
+   *  ML training replay needs (topic, marks, sub-topic/prompt text). */
+  getAllAttemptsChronological() {
+    return this.db.prepare(
+      `SELECT a.id AS id, a.student_id AS studentId, a.question_id AS questionId,
+              a.correct AS correct, a.created_at AS createdAt,
+              q.topic_id AS topicId, q.marks AS marks, q.sub_topic AS subTopic, q.prompt AS prompt
+       FROM attempts a JOIN questions q ON q.id = a.question_id
+       ORDER BY a.created_at ASC, a.id ASC`
+    ).all();
+  }
+  /** Most recent attempt's correctness per (student, question) pair, plus the
+   *  full id lists — the exact shape src/engine/collaborative.js expects. */
+  getOutcomesMatrix() {
+    const students = this.db.prepare("SELECT id FROM users WHERE role = 'student'").all().map((r) => r.id);
+    const questions = this.db.prepare("SELECT id FROM questions").all().map((r) => r.id);
+    const rows = this.db.prepare(
+      `SELECT student_id AS studentId, question_id AS questionId, correct
+       FROM attempts
+       WHERE id IN (SELECT MAX(id) FROM attempts GROUP BY student_id, question_id)`
+    ).all();
+    const outcomes = new Map();
+    for (const r of rows) outcomes.set(`${r.studentId}:${r.questionId}`, r.correct);
+    return { students, questions, outcomes };
+  }
+  /** A student's most recently wrong questions, most-recent-last — the
+   *  "seeds" for both the content-based and collaborative-filtering features. */
+  getRecentWrongQuestions(studentId, limit = 10) {
+    return this.db.prepare(
+      `SELECT q.id AS id, q.sub_topic AS subTopic, q.prompt AS prompt
+       FROM attempts a JOIN questions q ON q.id = a.question_id
+       WHERE a.student_id = ? AND a.correct = 0
+       ORDER BY a.created_at DESC, a.id DESC LIMIT ?`
+    ).all(studentId, limit).reverse();
   }
   getMasteryMap(studentId) {
     const rows = this.db.prepare(

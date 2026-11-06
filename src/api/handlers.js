@@ -3,9 +3,11 @@
 // relevant) the authenticated user, and returns a plain object. Authorisation
 // rules (ownership and roles) are enforced here and in the server.
 
-import { recommend } from "../engine/recommender.js";
+import { recommendML } from "../engine/recommender.js";
 import { readiness } from "../engine/mastery.js";
 import { STORABLE_THEMES, effectiveTheme, seasonalMessage } from "../engine/theme.js";
+import { collaborativeRecommend } from "../engine/collaborative.js";
+import { findRelatedResource } from "../engine/retrieval.js";
 
 const err = (msg, status) => { const e = new Error(msg); e.status = status; return e; };
 const isStaff = (user) => user && (user.role === "teacher" || user.role === "admin");
@@ -40,8 +42,9 @@ export function getRecommendations(db, { studentId, limit = 5, now = Date.now() 
   assertCanAccessStudent(user, studentId);
   if (!db.getUserById(studentId)) throw err("student not found", 404);
   const student = db.getStudent(studentId);
-  const ranked = recommend(
-    { rating: student.rating, mastery: db.getMasteryMap(studentId) },
+  const ranked = recommendML(
+    db,
+    { id: studentId, rating: student.rating, mastery: db.getMasteryMap(studentId) },
     db.getCandidates(studentId), { limit, now }
   );
   const questions = ranked.map((r) => {
@@ -58,8 +61,25 @@ export function submitAttempt(db, { studentId, questionId, answer, selfMarks, no
   if (studentId == null || questionId == null) throw err("studentId and questionId are required", 400);
   assertCanAccessStudent(user, studentId);
   if (!db.getUserById(studentId)) throw err("student not found", 404);
-  if (!db.getQuestion(questionId)) throw err("question not found", 404);
+  const question = db.getQuestion(questionId);
+  if (!question) throw err("question not found", 404);
   const result = db.recordAttempt({ studentId, questionId, answer, awarded: selfMarks, now });
+
+  // Stage 4: on a wrong answer, surface a real OCR mark-scheme excerpt and a
+  // few similar questions (Stage 3's collaborative filtering, seeded by this
+  // very attempt among the student's other wrong answers).
+  if (!result.correct) {
+    const topic = db.getTopicById(question.topic_id);
+    if (topic) {
+      const queryText = `${question.sub_topic ?? ""} ${question.prompt ?? ""}`;
+      const relatedResource = findRelatedResource(topic.name, queryText);
+      if (relatedResource) result.relatedResource = relatedResource;
+    }
+    const { students, questions, outcomes } = db.getOutcomesMatrix();
+    const similar = collaborativeRecommend({ students, questions, outcomes, targetStudent: studentId }, 3);
+    if (similar.length) result.similarQuestions = similar.map((s) => s.questionId);
+  }
+
   return { result };
 }
 
@@ -89,6 +109,17 @@ export function listQuestions(db, user) {
   return { questions: db.listQuestions() };
 }
 export function getTopics(db) { return { topics: db.getTopics() }; }
+
+/** A single question's safe practice payload (never the answer/mark scheme) —
+ *  used by the "try a similar question" shortcut after a wrong answer. */
+export function getQuestionForPractice(db, id, user) {
+  if (!user) throw err("authentication required", 401);
+  const q = db.getQuestion(id);
+  if (!q) throw err("question not found", 404);
+  const base = { questionId: q.id, topicId: q.topic_id, subTopic: q.sub_topic, type: q.type, prompt: q.prompt, marks: q.marks };
+  if (q.type === "objective") base.options = q.options; // never the answer
+  return base;
+}
 
 // ---- account management (admin) ----
 export function listUsers(db, user) {

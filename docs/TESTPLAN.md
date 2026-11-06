@@ -2,7 +2,7 @@
 
 Testing uses normal, boundary and erroneous data, together with integration tests
 through the HTTP API. All automated tests are run with Node's built-in runner
-(`npm test`); the suite currently contains 34 passing tests. The descriptions
+(`npm test`); the suite currently contains 67 passing tests. The descriptions
 below are written in the third person: they state what should be done and what
 should then be observed, rather than giving instructions.
 
@@ -43,6 +43,26 @@ should then be observed, rather than giving instructions.
 | P4 | HTTP API | A non-admin listing accounts | Erroneous | 403 is returned; an admin can list and disable, and the disabled user can no longer log in | api.test.js |
 | P5 | HTTP API | A student reading another student's analytics | Erroneous | 403 (forbidden) is returned | api.test.js |
 | P6 | HTTP API | A login with the wrong password | Erroneous | 401 is returned | api.test.js |
+| TH1 | Theme | Season boundaries (the Halloween window, month ranges) | Normal / Boundary | Each date resolves to the correct season | theme.test.js |
+| TH2 | Theme | `'auto'` vs. a fixed vs. an unknown stored value | Normal / Erroneous | Resolves to the season, the fixed theme, or falls back to crimson | theme.test.js |
+| TH3 | Theme | Seasonal banner messages | Normal | Crimson has none; every seasonal theme has one | theme.test.js |
+| TH4 | HTTP API | `GET /api/theme` with no changes made | Normal | Defaults to crimson, with no banner message | api.test.js |
+| TH5 | HTTP API | `PUT /api/theme` by role | Erroneous / Normal | A student/teacher is forbidden; an admin succeeds and the change persists | api.test.js |
+| TH6 | HTTP API | An unknown theme name | Erroneous | 400 is returned | api.test.js |
+| ML1 | ML recommender | Gradient descent on a linearly-separable synthetic dataset | Normal | Both classes are classified correctly | mlRecommender.test.js |
+| ML2 | ML recommender | Training on an empty dataset | Boundary | A harmless zero-weight model is returned, with no crash | mlRecommender.test.js |
+| ML3 | ML recommender | The very first attempt a student ever makes | Boundary | Feature values reflect pure cold-start defaults, confirming no leakage | mlRecommender.test.js |
+| ML4 | ML recommender | Attempts replayed into training pairs | Normal | Exactly one training pair is produced per attempt | mlRecommender.test.js |
+| ML5 | ML recommender | Attempt count below the training threshold | Boundary | `getOrTrainModel` returns null (cold start) | mlRecommender.test.js |
+| ML6 | ML recommender | Attempt count at the training threshold | Normal | A trained, cached model with six weights is returned | mlRecommender.test.js |
+| ML7 | ML recommender | `recommendML` during cold start, and once trained | Normal | Cold start matches Stage 1 exactly; once trained, a full ranked list with reasons is returned | mlRecommender.test.js |
+| RT1 | Retrieval (TF-IDF) | A query matching one of two sample excerpts | Normal | The matching excerpt is ranked first, with a higher score | retrieval.test.js |
+| RT2 | Retrieval (TF-IDF) | A search restricted to one topic | Normal | Only excerpts from that topic are returned | retrieval.test.js |
+| RT3 | Retrieval (TF-IDF) | A search for a topic with no excerpts | Boundary | The search falls back to the whole corpus | retrieval.test.js |
+| RT4 | Retrieval (TF-IDF) | A query with no vocabulary overlap at all | Erroneous | No match is returned | retrieval.test.js |
+| RT5 | Retrieval (TF-IDF) | The real OCR excerpt corpus | Normal | Every seeded topic has at least one excerpt, each with a working-looking OCR source URL | retrieval.test.js |
+| RT6 | HTTP API | A wrong answer on the stacks/queues question | Normal | A real OCR excerpt and similar-question ids are returned | api.test.js |
+| RT7 | HTTP API | A correct answer | Normal | `relatedResource`/`similarQuestions` are absent | api.test.js |
 
 ## Manual and user-acceptance checks
 

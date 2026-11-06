@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 
 import { Database } from "../src/db/database.js";
-import { seed } from "../src/db/seed.js";
+import { seed, QUESTIONS } from "../src/db/seed.js";
 import { createServer } from "../src/server.js";
 
 function freshDb() {
@@ -200,6 +200,42 @@ test("API: only an admin can change the site theme", async () => {
     // persists for subsequent (public) reads
     const after = await call(base, "GET", "/api/theme");
     assert.equal(after.data.stored, "halloween");
+  } finally { server.close(); await once(server, "close"); }
+});
+
+// ---- Stage 4: OCR past-paper retrieval on a wrong answer ----
+test("API: a wrong answer on the stacks/queues question returns a real OCR excerpt and similar questions", async () => {
+  const { server, base } = await start();
+  try {
+    const token = await loginAs(base, "student@example.com", "student123");
+    const teacherTok = await loginAs(base, "teacher@example.com", "teacher123");
+    const questions = (await call(base, "GET", "/api/questions", { token: teacherTok })).data.questions;
+    const stacksVsQueues = questions.find((q) => q.topic === "Data Structures" && /stack/i.test(q.prompt) && q.type === "written");
+    assert.ok(stacksVsQueues, "seed data should still contain the stacks-vs-queues written question");
+
+    const attempt = await call(base, "POST", "/api/attempts", { token,
+      body: { questionId: stacksVsQueues.id, answer: "I don't know", selfMarks: 0 } });
+    assert.equal(attempt.status, 200);
+    assert.equal(attempt.data.result.correct, false);
+    assert.ok(attempt.data.result.relatedResource);
+    assert.match(attempt.data.result.relatedResource.sourceUrl, /^https:\/\/www\.ocr\.org\.uk\//);
+    assert.ok(Array.isArray(attempt.data.result.similarQuestions));
+  } finally { server.close(); await once(server, "close"); }
+});
+
+test("API: a correct answer does not include relatedResource/similarQuestions", async () => {
+  const { server, base } = await start();
+  try {
+    const token = await loginAs(base, "student@example.com", "student123");
+    const recs = (await call(base, "GET", "/api/recommendations?limit=10", { token })).data;
+    const objective = recs.questions.find((q) => q.type === "objective");
+    const seedAnswer = QUESTIONS.find((q) => q.prompt === objective.prompt).answer;
+
+    const attempt = await call(base, "POST", "/api/attempts", { token,
+      body: { questionId: objective.questionId, answer: seedAnswer } });
+    assert.equal(attempt.data.result.correct, true);
+    assert.equal("relatedResource" in attempt.data.result, false);
+    assert.equal("similarQuestions" in attempt.data.result, false);
   } finally { server.close(); await once(server, "close"); }
 });
 

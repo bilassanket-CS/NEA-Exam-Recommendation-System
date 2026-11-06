@@ -62,7 +62,7 @@ Next due date = now + I days.
 `E = 1/(1 + 10^((Rq − Rs)/400))`. After an attempt:
 `Rs ← Rs + K(score − E)` and the question moves oppositely (K = 24).
 
-### 4.4 Selection / ranking
+### 4.4 Selection / ranking — Stage 1 (fixed-weight baseline)
 For each candidate question:
 ```
 weakness   = 1 − topicMastery
@@ -71,11 +71,45 @@ difficulty = closeness of P(student wins) to a target 0.6 (slightly challenging)
 score      = 0.5·weakness + 0.3·due + 0.2·difficulty
 ```
 Candidates are pushed into a **max-heap** and the top `k` are popped. Each result
-carries human-readable reasons (explainability).
+carries human-readable reasons (explainability). `recommend()` in
+`src/engine/recommender.js`. This is the **cold-start fallback** used until
+Stage 2 has enough attempt history to train from (see 4.5).
 
-### 4.5 Collaborative filtering (stretch)
-Build a question×student outcome matrix; for questions the target got wrong,
-find similar questions by **cosine similarity** and recommend the unseen ones.
+### 4.5 Content-based filtering + a learned model — Stage 2
+`recommendML()` (same file) extends the weakness/due/difficulty signals above
+with two more: a bag-of-words **content-based** similarity between a candidate
+question's text and the student's recently-wrong questions (`sub-topic
+similarity`), and the Stage-3 collaborative-filtering signal below
+(`cfSimilarity`). Instead of hand-picking how much to trust each signal, a
+**from-scratch logistic regression** (`src/engine/mlRecommender.js`) is trained
+by gradient descent on real historical attempts to predict P(correct) from
+these six features, replacing the Elo-only difficulty estimate with a learned
+one: `difficulty = closeness of the model's predicted P(correct) to 0.6`.
+
+Training data is built by **replaying** the `attempts` table in chronological
+order per student, reconstructing mastery/Elo/spaced-repetition state exactly
+as it was *before* each attempt — so no example leaks information from its own
+outcome or from later attempts. The model is cached (in the `settings` table)
+and retrained only when new attempts have arrived; with fewer than 30 attempts
+in the whole system, there isn't enough data to train reliably, so Stage 1's
+fixed weights are used instead.
+
+### 4.6 Collaborative filtering — Stage 3
+Build a question×student outcome matrix (`Database.getOutcomesMatrix()`); for
+questions the target student got wrong, find similar questions by **cosine
+similarity** (`src/engine/collaborative.js`) and recommend the unseen ones.
+Previously implemented but never called from the live app; now wired into
+Stage 2 as the `cfSimilarity` feature, so "students with a similar performance
+profile" becomes one more learned input rather than a separate bolt-on pass.
+
+### 4.7 OCR mark-scheme retrieval — Stage 4
+When a student answers a question wrong, `src/engine/retrieval.js` searches a
+small, hand-transcribed corpus of real excerpts from genuine, publicly
+downloadable OCR H446 mark schemes (`src/db/pastPapers.js`) using a
+from-scratch **TF-IDF** vector index + cosine similarity, and returns the best
+match (with a link to the original PDF) plus a few similar questions (reusing
+Stage 3) to try next. The corpus is transcribed once during development, not
+parsed from PDFs at runtime.
 
 ## 5. Key design decisions
 
@@ -88,6 +122,9 @@ find similar questions by **cosine similarity** and recommend the unseen ones.
 
 ## 6. Possible extensions
 
-Written-answer self-marking against a mark scheme, misconception-tagged distractors,
-an AI tutor/hint helper, exam-board predicted papers, a React/Next.js front end, and a
-companion mobile app.
+Misconception-tagged distractors, expanding the OCR mark-scheme corpus (4.7) to more
+papers/topics, a React/Next.js front end, and a companion mobile app.
+
+Already implemented since first written: written-answer self-marking, an AI tutor/hint
+helper (the Stage-4 retrieval feature), and exam-board predicted-paper-style content
+(the OCR mark-scheme corpus).

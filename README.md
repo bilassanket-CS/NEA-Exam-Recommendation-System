@@ -56,8 +56,16 @@ DB_FILE=data.db npm start
 - **Practice**: the UI requests a recommended question, the student answers, and
   **objective** answers are **auto-marked**; **written** answers are **self-marked**
   against a revealed mark scheme.
-- **Recommendation engine** chooses the next questions by combining three signals:
-  weak-topic priority, due-for-review (spaced repetition), and difficulty match.
+- **Adaptive AI recommendation pipeline** — a 3-stage system (see `docs/DESIGN.md` §4):
+  Stage 1 is a weighted heuristic (weak-topic priority, due-for-review, difficulty
+  match) used as a cold-start fallback; Stage 2 adds content-based features and a
+  from-scratch **logistic regression** trained by gradient descent on real attempt
+  history; Stage 3 is item-based **collaborative filtering** (cosine similarity)
+  feeding into the same model. No ML libraries — it's all hand-rolled, same as the
+  SM-2/Elo/max-heap algorithms below.
+- **OCR mark-scheme retrieval**: answer a question wrong and the app searches a small
+  corpus of real OCR H446 mark-scheme excerpts (TF-IDF + cosine similarity) and
+  suggests similar questions to try next.
 - **Dashboard**: per-topic mastery bars, accuracy, ability rating and an overall
   readiness estimate.
 
@@ -112,7 +120,10 @@ Protected endpoints require an `Authorization: Bearer <token>` header obtained f
 | `POST /api/questions` | Teacher/admin: add a question (objective or written). |
 | `PUT /api/questions/:id` | Teacher/admin: edit/tag a question. |
 | `GET /api/questions/:id/markscheme` | Reveal a written question's mark scheme (for self-marking). |
+| `GET /api/questions/:id/practice` | A single question's safe practice payload (no answer) — used by "try a similar question". |
 | `GET /api/users` `POST /api/users` `PATCH /api/users/:id/active` | Admin: manage user accounts. |
+| `GET /api/theme` | Current site theme `{ stored, effective, message }` (public). |
+| `PUT /api/theme` | Admin: set the site theme `{ theme }` (a fixed theme, or `"auto"` for seasonal). |
 
 ## Testing
 

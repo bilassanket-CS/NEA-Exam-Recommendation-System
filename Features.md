@@ -22,6 +22,18 @@ All fifteen are implemented and covered by automated tests (`npm test`).
 | 14 | Role-based access and content management | Done | `src/api/handlers.js` (role checks) + `src/server.js` routes; Admin tab |
 | 15 | Input validation and data-integrity safeguards | Done | `addQuestion`/`recordAttempt` validation; foreign keys in `schema.sql` |
 
+## Extensions beyond the original 15: the Adaptive AI recommendation pipeline
+
+Feature 7 (the weighted recommender) is now Stage 1 of a 3-stage pipeline, used as the
+cold-start fallback. The live `/api/recommendations` endpoint calls `recommendML()`.
+
+| # | Feature | Status | Implemented in |
+| --- | --- | --- | --- |
+| 16 | Content-based filtering (sub-topic text similarity to recently-missed questions) | Done | `src/engine/contentFeatures.js` |
+| 17 | Collaborative filtering wired into live recommendations | Done | `src/engine/collaborative.js` (`buildQuestionVectors`, `cfSimilarityScore`), `Database.getOutcomesMatrix` |
+| 18 | Hand-rolled machine learning — logistic regression trained (gradient descent) on real attempt history, replacing fixed weights | Done | `src/engine/mlRecommender.js` |
+| 19 | OCR mark-scheme retrieval (TF-IDF search) + similar-question suggestions on a wrong answer | Done | `src/engine/retrieval.js`, `src/db/pastPapers.js`, `public/app.js` |
+
 ## Notes on the three features added in this revision
 
 - **Feature 3 — written self-marking.** Questions now have a `type` of `objective` or

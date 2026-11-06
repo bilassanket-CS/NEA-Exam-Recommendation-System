@@ -19,6 +19,44 @@ export function cosineSimilarity(a, b) {
 }
 
 /**
+ * Build a vector per question across all students (0 = wrong, 1 = correct,
+ * 0 also used for "not attempted" — a deliberate simplification for the NEA).
+ * Shared by `collaborativeRecommend` and the Stage-2 ML feature builder so the
+ * question x student matrix is only ever assembled in one place.
+ * @param {number[]} students ordered list of student ids
+ * @param {number[]} questions ordered list of question ids
+ * @param {Map<string, number>} outcomes key `${studentId}:${questionId}` -> 1/0
+ * @returns {Map<number, number[]>} questionId -> outcome vector
+ */
+export function buildQuestionVectors(students, questions, outcomes) {
+  const vectors = new Map();
+  for (const q of questions) {
+    vectors.set(q, students.map((s) => outcomes.get(`${s}:${q}`) ?? 0));
+  }
+  return vectors;
+}
+
+/**
+ * Average cosine similarity between `questionId` and a set of "seed" questions
+ * (e.g. ones the student recently got wrong), using pre-built question vectors.
+ * Bounded to [0,1] since outcome vectors only ever contain 0/1 entries. Returns
+ * 0 if there are no seeds or no vector is known for the question.
+ */
+export function cfSimilarityScore(questionId, seedQuestionIds, vectors) {
+  const target = vectors.get(questionId);
+  if (!target || seedQuestionIds.length === 0) return 0;
+  let total = 0, count = 0;
+  for (const seed of seedQuestionIds) {
+    if (seed === questionId) continue;
+    const seedVec = vectors.get(seed);
+    if (!seedVec) continue;
+    total += cosineSimilarity(target, seedVec);
+    count++;
+  }
+  return count ? total / count : 0;
+}
+
+/**
  * @param {object} input
  *   students: number[]                      ordered list of student ids
  *   questions: number[]                     ordered list of question ids
@@ -29,13 +67,7 @@ export function cosineSimilarity(a, b) {
  */
 export function collaborativeRecommend(input, limit = 5) {
   const { students, questions, outcomes, targetStudent } = input;
-
-  // Build a vector per question across all students (0 = wrong, 1 = correct,
-  // 0 also used for "not attempted" — a deliberate simplification for the NEA).
-  const vectors = new Map();
-  for (const q of questions) {
-    vectors.set(q, students.map((s) => outcomes.get(`${s}:${q}`) ?? 0));
-  }
+  const vectors = buildQuestionVectors(students, questions, outcomes);
 
   // Questions the target student got wrong are the "seeds".
   const wrong = questions.filter((q) => outcomes.get(`${targetStudent}:${q}`) === 0

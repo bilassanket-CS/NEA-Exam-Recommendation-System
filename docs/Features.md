@@ -85,6 +85,34 @@ only) and are covered by the automated test suite (`npm test`).
     questions without a topic, answers not among the options and invalid roles are
     rejected, and foreign keys prevent orphaned records.
 
+## Extensions beyond the original 15: the Adaptive AI recommendation pipeline
+
+Feature 7's weighted recommender is now **Stage 1** of a 3-stage pipeline (the live
+`/api/recommendations` endpoint calls `recommendML()`, falling back to Stage 1 while
+there's too little attempt history to train from):
+
+16. **Content-based filtering (Stage 2).** A candidate question's text is compared,
+    via a from-scratch bag-of-words + cosine similarity, against the questions the
+    student has recently got wrong — `src/engine/contentFeatures.js`.
+
+17. **Collaborative filtering wired into live recommendations (Stage 3).** The
+    question×student outcome matrix and cosine-similarity ranking already existed
+    (`src/engine/collaborative.js`) but was never called by the running app; it's now
+    built from real attempts (`Database.getOutcomesMatrix`) and feeds every
+    recommendation.
+
+18. **Hand-rolled machine learning.** Instead of fixed hand-picked weights, a
+    from-scratch logistic regression (`src/engine/mlRecommender.js`) is trained by
+    gradient descent on real attempt history — replayed chronologically so no
+    training example leaks information from its own outcome or a later attempt — to
+    predict how likely a student is to answer a candidate question correctly.
+
+19. **OCR mark-scheme retrieval on a wrong answer.** A small corpus of real excerpts
+    transcribed from genuine, publicly downloadable OCR H446 mark schemes
+    (`src/db/pastPapers.js`) is searched with a from-scratch TF-IDF index + cosine
+    similarity (`src/engine/retrieval.js`); a wrong answer surfaces the best-matching
+    excerpt (with a link to the original PDF) plus a few similar questions to try.
+
 ## Demo accounts (seeded)
 
 | Role | Email | Password |
