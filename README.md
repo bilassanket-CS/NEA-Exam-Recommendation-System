@@ -158,8 +158,9 @@ A helper script is included: `bash scripts/push-to-github.sh YOUR-USERNAME repo-
 
 `.github/workflows/deploy.yml` runs the test suite, then syncs this repo over FTP to
 the cPanel-hosted Node.js App (Phusion Passenger, `passenger.js` as the startup file)
-on every push to `main`, and forces a restart by re-uploading `tmp/restart.txt` (whose
-changed mtime Passenger treats as a restart signal).
+on every push to `main`. A fresh timestamp is written into `tmp/restart.txt` before
+the sync, so it's always re-uploaded with a new mtime, which Passenger treats as a
+restart signal.
 
 The FTP account should be one scoped to the app's own folder (cPanel → Files → FTP
 Accounts → Directory `examprep.sanketbilas.online`), not the master cPanel login — if

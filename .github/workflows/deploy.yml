@@ -21,6 +21,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Passenger restarts the app whenever tmp/restart.txt's mtime changes. Write a
+      # fresh timestamp into it before syncing, so the FTP step below (which only
+      # uploads files whose content changed) always re-uploads it and bumps its mtime
+      # on the server — no separate connection/step needed to "touch" it remotely.
+      - name: Prepare restart signal
+        run: |
+          mkdir -p tmp
+          date -u +"restart requested at %Y-%m-%dT%H:%M:%SZ" > tmp/restart.txt
+
       # Zero-dependency project (see package.json) — no build step, the checked-out
       # source is deployed as-is. local-dir/server-dir are "./" because DEPLOY_FTP_USER
       # should be an FTP account scoped to /home/sanketbi/examprep.sanketbilas.online,
@@ -41,23 +50,3 @@ jobs:
             node_modules/**
             data.db
             .env
-
-      # The FTP sync above only uploads files that changed, so tmp/restart.txt (whose
-      # content never changes) wouldn't get a fresh mtime on its own. Passenger
-      # restarts the app whenever that file's mtime changes, so force it every run.
-      - name: Force a Passenger restart
-        env:
-          FTP_HOST: ${{ vars.DEPLOY_HOST }}
-          FTP_PROTOCOL: ${{ vars.DEPLOY_FTP_PROTOCOL }}
-          FTP_USER: ${{ secrets.DEPLOY_FTP_USER }}
-          FTP_PASSWORD: ${{ secrets.DEPLOY_FTP_PASSWORD }}
-        run: |
-          date -u +"restart requested at %Y-%m-%dT%H:%M:%SZ" > restart.txt
-          SCHEME="ftp"
-          if [ "$FTP_PROTOCOL" = "ftps" ] || [ "$FTP_PROTOCOL" = "ftps-legacy" ]; then
-            CURL_TLS_FLAG="--ssl-reqd"
-          else
-            CURL_TLS_FLAG=""
-          fi
-          curl --ftp-create-dirs $CURL_TLS_FLAG -T restart.txt \
-            --user "$FTP_USER:$FTP_PASSWORD" "$SCHEME://$FTP_HOST/tmp/restart.txt"
