@@ -63,9 +63,27 @@ test("findRelatedResource picks the hardware excerpt, not the protocols one, for
 test("findRelatedResource does not match on a single generic shared word alone", () => {
   // Regression: "code"/"times" recur across unrelated programming excerpts and
   // used to push an Iteration (FOR loop) question to match a Subroutines
-  // excerpt purely on that shared boilerplate.
-  const result = findRelatedResource("Programming Concepts", "Iteration Which construct repeats code a fixed number of times?");
+  // excerpt purely on that shared boilerplate. Includes the answer, matching
+  // what handlers.js actually queries with.
+  const result = findRelatedResource("Programming Concepts", "Iteration Which construct repeats code a fixed number of times? FOR loop");
   assert.equal(result, null);
+});
+
+test("findRelatedResource rescues a match on one genuinely rare, specific shared term", () => {
+  // Regression: the question prompt alone ("Hiding internal data behind
+  // methods is known as:") never says "encapsulation" — that's the answer,
+  // not the question — so this only matches once the answer is included in
+  // the query (as handlers.js does). A single highly specific shared word
+  // ("encapsulation") should be trusted even though it's only one term.
+  const result = findRelatedResource("Programming Concepts", "OOP Hiding internal data behind methods is known as: Encapsulation");
+  assert.ok(result);
+  assert.match(result.excerptText, /Encapsulation/);
+});
+
+test("findRelatedResource matches real primary/foreign key content once the answer is included", () => {
+  const result = findRelatedResource("Databases & SQL", "Keys A field that uniquely identifies each record is the: Primary key");
+  assert.ok(result);
+  assert.match(result.excerptText, /primary key/i);
 });
 
 test("findRelatedResource matches real SQL JOIN/WHERE content for a query/joins question", () => {

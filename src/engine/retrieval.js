@@ -9,12 +9,20 @@ import { cosineSimilarity } from "./collaborative.js";
 import { PAST_PAPER_EXCERPTS } from "../db/pastPapers.js";
 
 const MIN_SIMILARITY = 0.12;
-// With such short documents, a single coincidentally-shared word (e.g. both
-// texts happening to say "code", or the topic name itself, like "SQL") can
-// push cosine similarity above MIN_SIMILARITY on its own. Requiring at least
-// two shared distinctive (3+ letter) terms screens that out while still
-// accepting genuine multi-word overlaps.
+// A match resting on one genuinely unique/specific shared term (see below)
+// naturally scores lower, since the rest of a longer excerpt dilutes cosine
+// similarity — it's still trustworthy at a lower bar than an ordinary match.
+const MIN_SIMILARITY_WITH_UNIQUE_TERM = 0.08;
+// With such short documents, a single coincidentally-shared generic word
+// (e.g. both texts happening to say "code") can push cosine similarity above
+// MIN_SIMILARITY on its own. Requiring at least two shared distinctive (3+
+// letter) terms screens that out — UNLESS a single shared term is rare
+// enough across the corpus (appears in only one document) to be genuinely
+// distinctive by itself, e.g. "encapsulation": one such term is as
+// trustworthy as two ordinary ones.
 const MIN_SHARED_TERMS = 2;
+const UNIQUE_TERM_MAX_DOC_COUNT = 1;
+const UNIQUE_TERM_MIN_LENGTH = 9;
 
 /** Build a TF-IDF index once for a given corpus (pure function, easy to test
  *  against a custom corpus, and reused for the real PAST_PAPER_EXCERPTS). */
@@ -40,12 +48,26 @@ export function buildIndex(excerpts) {
   };
 
   const vectors = docsTokens.map(toTfIdfVector);
-  return { excerpts, vocabulary, vocabIndex, idf, vectors, docsTokens, toTfIdfVector };
+  return { excerpts, vocabulary, vocabIndex, idf, df, vectors, docsTokens, toTfIdfVector };
 }
 
-function sharedTermCount(queryTokens, docTokens) {
+/** How many distinctive (3+ letter) terms two token lists share, and whether
+ *  any shared term is rare enough across the whole corpus (df) AND long
+ *  enough (9+ letters) to count as distinctive on its own. Length matters
+ *  here too: a word can be "rare" in this small corpus purely by chance
+ *  (e.g. "pointers"/"methods" each happen to appear in only one excerpt,
+ *  despite being ordinary CS vocabulary) — length is a cheap proxy for
+ *  "actually a specific technical term" (e.g. "encapsulation"), screening
+ *  out that kind of accidental rarity. */
+function analyzeOverlap(queryTokens, docTokens, index) {
   const docSet = new Set(docTokens.filter((t) => t.length >= 3));
-  return new Set(queryTokens.filter((t) => t.length >= 3 && docSet.has(t))).size;
+  const shared = new Set(queryTokens.filter((t) => t.length >= 3 && docSet.has(t)));
+  const hasUniqueTerm = [...shared].some((t) => {
+    if (t.length < UNIQUE_TERM_MIN_LENGTH) return false;
+    const idx = index.vocabIndex.get(t);
+    return idx != null && index.df[idx] <= UNIQUE_TERM_MAX_DOC_COUNT;
+  });
+  return { count: shared.size, hasUniqueTerm };
 }
 
 let cachedIndex = null;
@@ -66,19 +88,26 @@ export function search(index, queryText, { topic, limit = 3 } = {}) {
   const queryTokens = tokenize(queryText);
   const queryVector = index.toTfIdfVector(queryTokens);
   return pool
-    .map((p) => ({
-      excerpt: p.excerpt,
-      score: cosineSimilarity(queryVector, p.vector),
-      sharedTerms: sharedTermCount(queryTokens, p.tokens),
-    }))
+    .map((p) => {
+      const overlap = analyzeOverlap(queryTokens, p.tokens, index);
+      return { excerpt: p.excerpt, score: cosineSimilarity(queryVector, p.vector),
+        sharedTerms: overlap.count, hasUniqueTerm: overlap.hasUniqueTerm };
+    })
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 }
 
-/** Best single match for a missed question, or null if nothing is relevant enough. */
+/** Best match for a missed question that clears the relevance bar, or null
+ *  if nothing does — checked in score order, not just the single top result,
+ *  since the highest-scoring candidate can fail the distinctiveness check
+ *  (a coincidental generic overlap) while a slightly lower-scoring one with
+ *  a genuinely specific shared term passes. */
 export function findRelatedResource(topic, queryText, index = getDefaultIndex()) {
-  const [top] = search(index, queryText, { topic, limit: 1 });
-  if (!top || top.score < MIN_SIMILARITY || top.sharedTerms < MIN_SHARED_TERMS) return null;
+  const candidates = search(index, queryText, { topic, limit: 5 });
+  const top = candidates.find((c) => c.hasUniqueTerm
+    ? c.score >= MIN_SIMILARITY_WITH_UNIQUE_TERM
+    : c.score >= MIN_SIMILARITY && c.sharedTerms >= MIN_SHARED_TERMS);
+  if (!top) return null;
   return {
     excerptText: top.excerpt.excerptText,
     sourceTitle: top.excerpt.sourceTitle,

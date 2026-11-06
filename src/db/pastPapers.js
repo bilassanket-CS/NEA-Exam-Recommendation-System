@@ -80,6 +80,15 @@ export const PAST_PAPER_EXCERPTS = [
     paperCode: "H446/02", series: "June 2023",
   },
   {
+    topic: "Programming Concepts",
+    excerptText: "Encapsulation: allowing an attribute to only be accessed or changed via a "
+      + "method, rather than directly — for example, a public getLevel() method that returns a "
+      + "private level attribute, instead of exposing that attribute itself.",
+    sourceTitle: "OCR H446/02 Algorithms and Programming — Mark Scheme, June 2023, Q9(b)(iii)",
+    sourceUrl: "https://www.ocr.org.uk/Images/703954-mark-scheme-algorithms-and-programming.pdf",
+    paperCode: "H446/02", series: "June 2023",
+  },
+  {
     topic: "Networks",
     excerptText: "Router: connects networks together, assigns IP addresses to devices, and "
       + "examines data packets and forwards them between networks. Switch: connects multiple "

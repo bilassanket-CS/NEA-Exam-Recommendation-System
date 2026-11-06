@@ -69,7 +69,13 @@ export function submitAttempt(db, { studentId, questionId, answer, selfMarks, no
   if (!result.correct) {
     const topic = db.getTopicById(question.topic_id);
     if (topic) {
-      const queryText = `${question.sub_topic ?? ""} ${question.prompt ?? ""}`;
+      // Include the correct answer (or mark scheme) in the query: we're
+      // retrieving content to explain THAT answer, and the question prompt
+      // alone often doesn't contain the key term at all (e.g. "Hiding
+      // internal data behind methods is known as:" never says
+      // "encapsulation" — that's the answer, not the question).
+      const answerTerm = question.type === "written" ? (question.mark_scheme ?? "") : (question.answer ?? "");
+      const queryText = `${question.sub_topic ?? ""} ${question.prompt ?? ""} ${answerTerm}`;
       const relatedResource = findRelatedResource(topic.name, queryText);
       if (relatedResource) result.relatedResource = relatedResource;
     }
