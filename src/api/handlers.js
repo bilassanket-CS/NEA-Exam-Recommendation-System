@@ -5,6 +5,7 @@
 
 import { recommend } from "../engine/recommender.js";
 import { readiness } from "../engine/mastery.js";
+import { STORABLE_THEMES, effectiveTheme, seasonalMessage } from "../engine/theme.js";
 
 const err = (msg, status) => { const e = new Error(msg); e.status = status; return e; };
 const isStaff = (user) => user && (user.role === "teacher" || user.role === "admin");
@@ -103,4 +104,17 @@ export function setUserActive(db, id, active, user) {
   if (!user || user.role !== "admin") throw err("forbidden", 403);
   db.setUserActive(id, active);
   return { user: db.getUserById(id) };
+}
+
+// ---- site theme ----
+export function getTheme(db) {
+  const stored = db.getSetting("theme") || "crimson";
+  const effective = effectiveTheme(stored);
+  return { stored, effective, message: seasonalMessage(effective) };
+}
+export function setTheme(db, { theme }, user) {
+  if (!user || user.role !== "admin") throw err("forbidden", 403);
+  if (!Object.prototype.hasOwnProperty.call(STORABLE_THEMES, theme)) throw err("unknown theme", 400);
+  db.setSetting("theme", theme);
+  return getTheme(db);
 }

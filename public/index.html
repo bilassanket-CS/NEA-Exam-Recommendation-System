@@ -4,9 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StudyTrackr</title>
+  <script>
+    // Apply the last-known theme immediately (before the stylesheet loads) so
+    // repeat visits don't flash the default theme before the real one applies.
+    (function () {
+      try {
+        var t = localStorage.getItem("theme");
+        if (t && t !== "crimson") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="icon" type="image/png" href="st.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div id="seasonbar" class="seasonbar hidden"></div>
   <header id="site-header">
     <h1>StudyTrackr</h1>
     <p class="subtitle">Adaptive revision &middot; weak-topic targeting &middot; spaced repetition</p>
@@ -146,6 +158,26 @@
 
       <!-- Admin (teacher/admin only) -->
       <section id="admin" class="panel">
+        <h2 id="theme-heading">Site theme</h2>
+        <div class="card" id="theme-card">
+          <p class="muted">Changes the look of the whole site for everyone. Choose Automatic to follow
+            the season by UK date, or pick a fixed theme.</p>
+          <label>Theme
+            <select id="theme-select">
+              <option value="auto">Automatic (by season and date, UK time)</option>
+              <option value="crimson">Classic (Crimson and Black)</option>
+              <option value="spring">Spring</option>
+              <option value="summer">Summer</option>
+              <option value="autumn">Autumn</option>
+              <option value="winter">Winter</option>
+              <option value="halloween">Halloween</option>
+              <option value="christmas">Christmas</option>
+            </select>
+          </label>
+          <div class="actions"><button id="apply-theme">Apply theme</button></div>
+          <p id="theme-status" class="muted small"></p>
+        </div>
+
         <h2>Add a question</h2>
         <div class="card">
           <label>Topic <select id="q-topic"></select></label>

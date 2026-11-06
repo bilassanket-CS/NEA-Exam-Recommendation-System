@@ -297,6 +297,17 @@ export class Database {
       throw err;
     }
   }
+
+  // ---- site settings (theme) ----------------------------------------------
+  getSetting(name) {
+    const row = this.db.prepare("SELECT value FROM settings WHERE name = ?").get(name);
+    return row ? row.value : null;
+  }
+  setSetting(name, value) {
+    this.db.prepare(
+      "INSERT INTO settings (name, value) VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET value = excluded.value"
+    ).run(name, value);
+  }
 }
 
 function badRequest(message) {

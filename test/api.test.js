@@ -166,3 +166,48 @@ test("API: wrong password is rejected", async () => {
     assert.equal(status, 401);
   } finally { server.close(); await once(server, "close"); }
 });
+
+// ---- site theme ----
+test("API: GET /api/theme is public and defaults to crimson", async () => {
+  const { server, base } = await start();
+  try {
+    const { status, data } = await call(base, "GET", "/api/theme");
+    assert.equal(status, 200);
+    assert.equal(data.stored, "crimson");
+    assert.equal(data.effective, "crimson");
+    assert.equal(data.message, "");
+  } finally { server.close(); await once(server, "close"); }
+});
+
+test("API: only an admin can change the site theme", async () => {
+  const { server, base } = await start();
+  try {
+    const studentTok = await loginAs(base, "student@example.com", "student123");
+    const denied = await call(base, "PUT", "/api/theme", { token: studentTok, body: { theme: "halloween" } });
+    assert.equal(denied.status, 403);
+
+    const teacherTok = await loginAs(base, "teacher@example.com", "teacher123");
+    const deniedTeacher = await call(base, "PUT", "/api/theme", { token: teacherTok, body: { theme: "halloween" } });
+    assert.equal(deniedTeacher.status, 403);
+
+    const adminTok = await loginAs(base, "admin@example.com", "admin123");
+    const ok = await call(base, "PUT", "/api/theme", { token: adminTok, body: { theme: "halloween" } });
+    assert.equal(ok.status, 200);
+    assert.equal(ok.data.stored, "halloween");
+    assert.equal(ok.data.effective, "halloween");
+    assert.ok(ok.data.message.length > 0);
+
+    // persists for subsequent (public) reads
+    const after = await call(base, "GET", "/api/theme");
+    assert.equal(after.data.stored, "halloween");
+  } finally { server.close(); await once(server, "close"); }
+});
+
+test("API: an unknown theme name is rejected", async () => {
+  const { server, base } = await start();
+  try {
+    const adminTok = await loginAs(base, "admin@example.com", "admin123");
+    const { status } = await call(base, "PUT", "/api/theme", { token: adminTok, body: { theme: "not-a-real-theme" } });
+    assert.equal(status, 400);
+  } finally { server.close(); await once(server, "close"); }
+});

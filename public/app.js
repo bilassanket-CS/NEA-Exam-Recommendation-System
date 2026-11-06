@@ -23,12 +23,46 @@ const api = {
 init();
 
 async function init() {
+  applyTheme();
   wireLanding();
   wireAuth();
   if (token) {
     try { currentUser = (await api.get("/api/auth/me")).user; showApp(); }
     catch { token = null; localStorage.removeItem("token"); showLanding(); }
   } else showLanding();
+}
+
+// ---------- theme ----------
+async function applyTheme() {
+  try {
+    const { effective, message } = await api.get("/api/theme");
+    if (effective === "crimson") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", effective);
+    localStorage.setItem("theme", effective);
+    const bar = document.getElementById("seasonbar");
+    if (message) {
+      bar.innerHTML = `<b>${esc(effective.charAt(0).toUpperCase() + effective.slice(1))}</b> &nbsp; ${esc(message)}`;
+      bar.classList.remove("hidden");
+    } else {
+      bar.classList.add("hidden");
+    }
+  } catch (e) { /* theme is cosmetic; a failed fetch just keeps the cached/default look */ }
+}
+const THEME_LABELS = {
+  crimson: "Classic (Crimson and Black)", spring: "Spring", summer: "Summer", autumn: "Autumn",
+  winter: "Winter", halloween: "Halloween", christmas: "Christmas",
+};
+async function loadThemeAdmin() {
+  const { stored, effective } = await api.get("/api/theme");
+  document.getElementById("theme-select").value = stored;
+  document.getElementById("theme-status").textContent = stored === "auto"
+    ? `Mode: Automatic. Today this shows the ${THEME_LABELS[effective] || effective} theme.`
+    : `Current theme: ${THEME_LABELS[stored] || stored}.`;
+}
+async function applyThemeFromAdmin() {
+  await api.put("/api/theme", { theme: val("theme-select") });
+  await applyTheme();
+  await loadThemeAdmin();
 }
 
 // ---------- landing ----------
@@ -114,6 +148,7 @@ function setupTabs() {
   document.getElementById("add-question").onclick = addQuestion;
   document.getElementById("create-user").onclick = createUser;
   document.getElementById("q-type").onchange = toggleQuestionType;
+  document.getElementById("apply-theme").onclick = applyThemeFromAdmin;
 }
 function activateTab(name) {
   document.querySelectorAll(".tab[data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
@@ -228,7 +263,9 @@ async function loadAdmin() {
   document.getElementById("users-heading").classList.toggle("hidden", !adminOnly);
   document.getElementById("users").classList.toggle("hidden", !adminOnly);
   document.getElementById("create-user-card").classList.toggle("hidden", !adminOnly);
-  if (adminOnly) loadUsers();
+  document.getElementById("theme-heading").classList.toggle("hidden", !adminOnly);
+  document.getElementById("theme-card").classList.toggle("hidden", !adminOnly);
+  if (adminOnly) { loadUsers(); loadThemeAdmin(); }
 }
 async function addQuestion() {
   const type = document.getElementById("q-type").value;

@@ -15,10 +15,11 @@ import * as h from "./api/handlers.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(__dirname, "..", "public");
 const MIME = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml" };
+  ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml",
+  ".png": "image/png" };
 
 // Endpoints that do NOT require a valid session token.
-const PUBLIC_API = new Set(["GET /api/health", "POST /api/auth/register", "POST /api/auth/login"]);
+const PUBLIC_API = new Set(["GET /api/health", "POST /api/auth/register", "POST /api/auth/login", "GET /api/theme"]);
 
 export function createServer(database) {
   let db = database;
@@ -50,6 +51,10 @@ export function createServer(database) {
 
         // ---- reference ----
         if (route === "GET /api/topics") return send(res, 200, h.getTopics(db));
+
+        // ---- site theme ----
+        if (route === "GET /api/theme") return send(res, 200, h.getTheme(db));
+        if (route === "PUT /api/theme") return send(res, 200, h.setTheme(db, await readJson(req), user));
 
         // ---- practice / analytics ----
         if (req.method === "GET" && pathname === "/api/recommendations") {

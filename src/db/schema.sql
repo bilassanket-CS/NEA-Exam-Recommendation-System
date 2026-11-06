@@ -78,3 +78,10 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_attempts_student ON attempts(student_id);
 CREATE INDEX IF NOT EXISTS idx_questions_topic  ON questions(topic_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user    ON sessions(user_id);
+
+-- Site-wide settings (currently just the theme), admin-configurable.
+CREATE TABLE IF NOT EXISTS settings (
+  name  TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+INSERT OR IGNORE INTO settings (name, value) VALUES ('theme', 'crimson');
