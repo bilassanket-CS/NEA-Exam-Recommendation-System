@@ -156,20 +156,24 @@ A helper script is included: `bash scripts/push-to-github.sh YOUR-USERNAME repo-
 
 ## Deploying to examprep.sanketbilas.online
 
-`.github/workflows/deploy.yml` runs the test suite, then syncs this repo over SSH to
+`.github/workflows/deploy.yml` runs the test suite, then syncs this repo over FTP to
 the cPanel-hosted Node.js App (Phusion Passenger, `passenger.js` as the startup file)
-on every push to `main`, and restarts it by touching `tmp/restart.txt`.
+on every push to `main`, and forces a restart by re-uploading `tmp/restart.txt` (whose
+changed mtime Passenger treats as a restart signal).
+
+The FTP account should be one scoped to the app's own folder (cPanel → Files → FTP
+Accounts → Directory `examprep.sanketbilas.online`), not the master cPanel login — if
+its credentials ever leak, the blast radius is just this folder.
 
 It needs these set under **Settings → Secrets and variables → Actions** on GitHub
 (never commit these values):
 
 | Name | Kind | Value |
 | --- | --- | --- |
-| `DEPLOY_SSH_KEY` | Secret | Private half of an SSH key authorised in cPanel's SSH Access tool |
-| `DEPLOY_HOST` | Variable | `s19429.lon1.stableserver.net` |
-| `DEPLOY_PORT` | Variable | The SSH port shown on cPanel's SSH Access page |
-| `DEPLOY_USER` | Variable | `sanketbi` |
-| `DEPLOY_PATH` | Variable | `/home/sanketbi/examprep.sanketbilas.online` |
+| `DEPLOY_FTP_USER` | Secret | `studytrackr@sanketbilas.online` |
+| `DEPLOY_FTP_PASSWORD` | Secret | The FTP account's password |
+| `DEPLOY_HOST` | Variable | The FTP server address shown on cPanel's FTP Accounts page |
+| `DEPLOY_FTP_PROTOCOL` | Variable | `ftps` if the host supports FTP-over-TLS (preferred — credentials aren't sent in the clear), otherwise `ftp` |
 
 The deploy excludes `.git/`, `.github/`, `node_modules/`, `data.db` and `.env`, so a
 live server-side database file is never overwritten by a push.
