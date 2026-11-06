@@ -35,6 +35,51 @@ export const PAST_PAPER_EXCERPTS = [
     paperCode: "H446/02", series: "June 2023",
   },
   {
+    topic: "Boolean Logic",
+    excerptText: "A half adder has two outputs from inputs A and B: the sum S = A XOR B, and the "
+      + "carry C = A AND B. Truth table: A=0,B=0 gives S=0,C=0; A=0,B=1 gives S=1,C=0; A=1,B=0 "
+      + "gives S=1,C=0; A=1,B=1 gives S=0,C=1. Two half adders can be joined together with an OR "
+      + "gate to form a full adder; four full adders can be used to add two four-bit numbers.",
+    sourceTitle: "OCR H446/01 Computer Systems — Mark Scheme, Autumn 2021, Q5",
+    sourceUrl: "https://www.ocr.org.uk/Images/666849-mark-scheme-computer-systems.pdf",
+    paperCode: "H446/01", series: "Autumn 2021",
+  },
+  {
+    topic: "Databases & SQL",
+    excerptText: "The SELECT keyword chooses which fields to return, and the FROM keyword "
+      + "specifies the table(s) being queried. Tables can be joined using the JOIN (or INNER "
+      + "JOIN) keyword, or equivalently a WHERE clause comparing the shared key fields between "
+      + "the two tables. Fields should be qualified with their table name where the same field "
+      + "name exists in more than one table. A WHERE clause can also filter rows to show only "
+      + "records matching a particular condition.",
+    sourceTitle: "OCR H446/01 Computer Systems — Mark Scheme, June 2022",
+    sourceUrl: "https://www.ocr.org.uk/Images/676943-mark-scheme-computer-systems.pdf",
+    paperCode: "H446/01", series: "June 2022",
+  },
+  {
+    topic: "Databases & SQL",
+    excerptText: "A relational database stores data in multiple different tables, linked "
+      + "together using relationships created by primary and foreign keys — the primary key of "
+      + "one table can be used as a foreign key in another to create a one-to-many relationship. "
+      + "Benefits: less duplication/redundant data, which can reduce file size; the database is "
+      + "easier to manage and expand; searching may be faster, since not every table needs to be "
+      + "searched; it can be more secure, as different tables can have different access levels.",
+    sourceTitle: "OCR H446/01 Computer Systems — Mark Scheme, June 2024",
+    sourceUrl: "https://www.ocr.org.uk/Images/726741-mark-scheme-computer-systems.pdf",
+    paperCode: "H446/01", series: "June 2024",
+  },
+  {
+    topic: "Programming Concepts",
+    excerptText: "One piece of code (a subroutine) can be used many times, in multiple places, "
+      + "which makes code more efficient — there is no need to write the same code multiple "
+      + "times. This takes less time to plan, design and code the program; makes errors easier "
+      + "to detect and fix, since fixing it once corrects every place it is used; and makes the "
+      + "program easier to maintain.",
+    sourceTitle: "OCR H446/02 Algorithms and Programming — Mark Scheme, June 2023, Q4(c)",
+    sourceUrl: "https://www.ocr.org.uk/Images/703954-mark-scheme-algorithms-and-programming.pdf",
+    paperCode: "H446/02", series: "June 2023",
+  },
+  {
     topic: "Networks",
     excerptText: "Router: connects networks together, assigns IP addresses to devices, and "
       + "examines data packets and forwards them between networks. Switch: connects multiple "

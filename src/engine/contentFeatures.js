@@ -17,6 +17,10 @@ const STOPWORDS = new Set([
   "did", "i", "you", "your", "we", "they", "them", "their", "if", "but", "not", "no",
   "can", "could", "would", "should", "each", "one", "all", "any", "about", "between",
   "into", "than", "then", "there", "where", "when", "why", "how", "mark", "marks",
+  // Generic exam/programming boilerplate that recurs across many unrelated
+  // excerpts (e.g. "code" appears in almost every programming-related mark
+  // scheme) and so isn't actually discriminative between topics.
+  "code", "times", "question", "answer", "guidance",
 ]);
 
 export function tokenize(text) {

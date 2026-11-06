@@ -6,7 +6,6 @@
 import { recommendML } from "../engine/recommender.js";
 import { readiness } from "../engine/mastery.js";
 import { STORABLE_THEMES, effectiveTheme, seasonalMessage } from "../engine/theme.js";
-import { collaborativeRecommend } from "../engine/collaborative.js";
 import { findRelatedResource } from "../engine/retrieval.js";
 
 const err = (msg, status) => { const e = new Error(msg); e.status = status; return e; };
@@ -66,8 +65,7 @@ export function submitAttempt(db, { studentId, questionId, answer, selfMarks, no
   const result = db.recordAttempt({ studentId, questionId, answer, awarded: selfMarks, now });
 
   // Stage 4: on a wrong answer, surface a real OCR mark-scheme excerpt and a
-  // few similar questions (Stage 3's collaborative filtering, seeded by this
-  // very attempt among the student's other wrong answers).
+  // few similar questions to try next.
   if (!result.correct) {
     const topic = db.getTopicById(question.topic_id);
     if (topic) {
@@ -75,14 +73,21 @@ export function submitAttempt(db, { studentId, questionId, answer, selfMarks, no
       const relatedResource = findRelatedResource(topic.name, queryText);
       if (relatedResource) result.relatedResource = relatedResource;
     }
-    // Restricted to the SAME topic as the missed question: pure behavioural
-    // collaborative filtering (who-got-this-wrong-together) can otherwise
-    // surface a completely unrelated topic when attempt data is still sparse,
-    // which looks wrong even though the cosine-similarity math is correct.
-    const { students, outcomes } = db.getOutcomesMatrix();
-    const sameTopicQuestions = db.getQuestionIdsByTopic(question.topic_id);
-    const similar = collaborativeRecommend({ students, questions: sameTopicQuestions, outcomes, targetStudent: studentId }, 3);
-    if (similar.length) result.similarQuestions = similar.map((s) => s.questionId);
+    // "Similar questions" reuses the full recommendation engine (Stages 1-3),
+    // restricted to the SAME topic as the missed question and excluding it.
+    // Deliberately NOT pure collaborative filtering: that excludes already-
+    // attempted questions, so it silently returns nothing once a student has
+    // tried everything in a small topic (this seed data only has 3-6
+    // questions per topic) — recommendML ranks by weakness/due/difficulty
+    // instead, which always has something to suggest as long as another
+    // question in the topic exists.
+    const sameTopicCandidates = db.getCandidates(studentId).filter(
+      (c) => c.topicId === question.topic_id && c.questionId !== questionId);
+    if (sameTopicCandidates.length) {
+      const student = { id: studentId, rating: db.getStudent(studentId).rating, mastery: db.getMasteryMap(studentId) };
+      const ranked = recommendML(db, student, sameTopicCandidates, { limit: 3, now });
+      result.similarQuestions = ranked.map((r) => r.questionId);
+    }
   }
 
   return { result };

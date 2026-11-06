@@ -9,6 +9,12 @@ import { cosineSimilarity } from "./collaborative.js";
 import { PAST_PAPER_EXCERPTS } from "../db/pastPapers.js";
 
 const MIN_SIMILARITY = 0.12;
+// With such short documents, a single coincidentally-shared word (e.g. both
+// texts happening to say "code", or the topic name itself, like "SQL") can
+// push cosine similarity above MIN_SIMILARITY on its own. Requiring at least
+// two shared distinctive (3+ letter) terms screens that out while still
+// accepting genuine multi-word overlaps.
+const MIN_SHARED_TERMS = 2;
 
 /** Build a TF-IDF index once for a given corpus (pure function, easy to test
  *  against a custom corpus, and reused for the real PAST_PAPER_EXCERPTS). */
@@ -34,7 +40,12 @@ export function buildIndex(excerpts) {
   };
 
   const vectors = docsTokens.map(toTfIdfVector);
-  return { excerpts, vocabulary, vocabIndex, idf, vectors, toTfIdfVector };
+  return { excerpts, vocabulary, vocabIndex, idf, vectors, docsTokens, toTfIdfVector };
+}
+
+function sharedTermCount(queryTokens, docTokens) {
+  const docSet = new Set(docTokens.filter((t) => t.length >= 3));
+  return new Set(queryTokens.filter((t) => t.length >= 3 && docSet.has(t))).size;
 }
 
 let cachedIndex = null;
@@ -49,13 +60,17 @@ function getDefaultIndex() {
  * that topic has no excerpts). Returns `{ excerpt, score }[]`, best first.
  */
 export function search(index, queryText, { topic, limit = 3 } = {}) {
-  const pool = topic && index.excerpts.some((e) => e.topic === topic)
-    ? index.excerpts.map((e, i) => ({ excerpt: e, vector: index.vectors[i] })).filter((p) => p.excerpt.topic === topic)
-    : index.excerpts.map((e, i) => ({ excerpt: e, vector: index.vectors[i] }));
+  const all = index.excerpts.map((e, i) => ({ excerpt: e, vector: index.vectors[i], tokens: index.docsTokens[i] }));
+  const pool = topic && all.some((p) => p.excerpt.topic === topic) ? all.filter((p) => p.excerpt.topic === topic) : all;
 
-  const queryVector = index.toTfIdfVector(tokenize(queryText));
+  const queryTokens = tokenize(queryText);
+  const queryVector = index.toTfIdfVector(queryTokens);
   return pool
-    .map((p) => ({ excerpt: p.excerpt, score: cosineSimilarity(queryVector, p.vector) }))
+    .map((p) => ({
+      excerpt: p.excerpt,
+      score: cosineSimilarity(queryVector, p.vector),
+      sharedTerms: sharedTermCount(queryTokens, p.tokens),
+    }))
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 }
@@ -63,7 +78,7 @@ export function search(index, queryText, { topic, limit = 3 } = {}) {
 /** Best single match for a missed question, or null if nothing is relevant enough. */
 export function findRelatedResource(topic, queryText, index = getDefaultIndex()) {
   const [top] = search(index, queryText, { topic, limit: 1 });
-  if (!top || top.score < MIN_SIMILARITY) return null;
+  if (!top || top.score < MIN_SIMILARITY || top.sharedTerms < MIN_SHARED_TERMS) return null;
   return {
     excerptText: top.excerpt.excerptText,
     sourceTitle: top.excerpt.sourceTitle,

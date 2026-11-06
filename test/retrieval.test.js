@@ -60,6 +60,20 @@ test("findRelatedResource picks the hardware excerpt, not the protocols one, for
   assert.match(result.excerptText, /Router/);
 });
 
+test("findRelatedResource does not match on a single generic shared word alone", () => {
+  // Regression: "code"/"times" recur across unrelated programming excerpts and
+  // used to push an Iteration (FOR loop) question to match a Subroutines
+  // excerpt purely on that shared boilerplate.
+  const result = findRelatedResource("Programming Concepts", "Iteration Which construct repeats code a fixed number of times?");
+  assert.equal(result, null);
+});
+
+test("findRelatedResource matches real SQL JOIN/WHERE content for a query/joins question", () => {
+  const result = findRelatedResource("Databases & SQL", "Joins Which SQL keyword combines rows from two tables on a matching column?");
+  assert.ok(result);
+  assert.match(result.excerptText, /JOIN/);
+});
+
 test("findRelatedResource finds the stacks/queues excerpt for a matching real question", () => {
   const result = findRelatedResource("Data Structures", "Explain the difference between a stack and a queue, giving one use of each.");
   assert.ok(result);

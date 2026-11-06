@@ -102,9 +102,6 @@ export class Database {
   getTopicById(id) {
     return this.db.prepare("SELECT id, name FROM topics WHERE id = ?").get(id);
   }
-  getQuestionIdsByTopic(topicId) {
-    return this.db.prepare("SELECT id FROM questions WHERE topic_id = ?").all(topicId).map((r) => r.id);
-  }
 
   addQuestion({ topicId, subTopic = null, type = "objective", prompt, options = [],
                 answer = "", markScheme = null, difficulty = 1200, marks = 1 }) {

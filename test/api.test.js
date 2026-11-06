@@ -223,6 +223,30 @@ test("API: a wrong answer on the stacks/queues question returns a real OCR excer
   } finally { server.close(); await once(server, "close"); }
 });
 
+test("API: similarQuestions still suggests something after every other question in the topic has already been attempted", async () => {
+  // Regression: the live site went silent once a student had tried every
+  // question in a small topic, because the old implementation (pure
+  // collaborative filtering) excludes already-attempted questions.
+  const { server, base } = await start();
+  try {
+    const token = await loginAs(base, "student@example.com", "student123");
+    const teacherTok = await loginAs(base, "teacher@example.com", "teacher123");
+    const questions = (await call(base, "GET", "/api/questions", { token: teacherTok })).data.questions;
+    const networkQuestions = questions.filter((q) => q.topic === "Networks" && q.type === "objective");
+    assert.ok(networkQuestions.length >= 2);
+
+    // Attempt every Networks question except the last one first.
+    for (const q of networkQuestions.slice(0, -1)) {
+      await call(base, "POST", "/api/attempts", { token, body: { questionId: q.id, answer: "wrong on purpose" } });
+    }
+    const last = networkQuestions[networkQuestions.length - 1];
+    const attempt = await call(base, "POST", "/api/attempts", { token, body: { questionId: last.id, answer: "wrong on purpose" } });
+    assert.equal(attempt.data.result.correct, false);
+    assert.ok(Array.isArray(attempt.data.result.similarQuestions));
+    assert.ok(attempt.data.result.similarQuestions.length > 0, "similarQuestions should not be empty even once every other Networks question is attempted");
+  } finally { server.close(); await once(server, "close"); }
+});
+
 test("API: similarQuestions never crosses into a different topic", async () => {
   // Regression: collaborative filtering is purely behavioural, so on sparse
   // attempt data it could otherwise suggest a completely unrelated topic.
