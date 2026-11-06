@@ -223,6 +223,26 @@ test("API: a wrong answer on the stacks/queues question returns a real OCR excer
   } finally { server.close(); await once(server, "close"); }
 });
 
+test("API: similarQuestions never crosses into a different topic", async () => {
+  // Regression: collaborative filtering is purely behavioural, so on sparse
+  // attempt data it could otherwise suggest a completely unrelated topic.
+  const { server, base } = await start();
+  try {
+    const token = await loginAs(base, "student@example.com", "student123");
+    const teacherTok = await loginAs(base, "teacher@example.com", "teacher123");
+    const questions = (await call(base, "GET", "/api/questions", { token: teacherTok })).data.questions;
+    const networkQ = questions.find((q) => q.topic === "Networks" && q.type === "objective");
+    const networkIds = new Set(questions.filter((q) => q.topic === "Networks").map((q) => q.id));
+
+    const attempt = await call(base, "POST", "/api/attempts", { token,
+      body: { questionId: networkQ.id, answer: "a deliberately wrong answer" } });
+    assert.equal(attempt.data.result.correct, false);
+    for (const qid of attempt.data.result.similarQuestions || []) {
+      assert.ok(networkIds.has(qid), `question ${qid} is not in the Networks topic`);
+    }
+  } finally { server.close(); await once(server, "close"); }
+});
+
 test("API: a correct answer does not include relatedResource/similarQuestions", async () => {
   const { server, base } = await start();
   try {

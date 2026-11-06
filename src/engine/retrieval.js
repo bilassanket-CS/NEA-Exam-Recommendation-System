@@ -8,7 +8,7 @@ import { tokenize } from "./contentFeatures.js";
 import { cosineSimilarity } from "./collaborative.js";
 import { PAST_PAPER_EXCERPTS } from "../db/pastPapers.js";
 
-const MIN_SIMILARITY = 0.05;
+const MIN_SIMILARITY = 0.12;
 
 /** Build a TF-IDF index once for a given corpus (pure function, easy to test
  *  against a custom corpus, and reused for the real PAST_PAPER_EXCERPTS). */

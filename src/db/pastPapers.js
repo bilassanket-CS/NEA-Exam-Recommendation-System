@@ -36,6 +36,19 @@ export const PAST_PAPER_EXCERPTS = [
   },
   {
     topic: "Networks",
+    excerptText: "Router: connects networks together, assigns IP addresses to devices, and "
+      + "examines data packets and forwards them between networks. Switch: connects multiple "
+      + "wired devices on the same network and forwards data to the intended recipient based "
+      + "on its MAC address. Hub: receives a signal and broadcasts it to every connected device, "
+      + "with no filtering. Repeater: receives a signal and retransmits it to extend the range "
+      + "of a network. Gateway: connects different types of network and translates protocols "
+      + "between them. Bridge: connects different segments of the same network.",
+    sourceTitle: "OCR H446/01 Computer Systems — Mark Scheme, June 2024, Q6(d)",
+    sourceUrl: "https://www.ocr.org.uk/Images/726741-mark-scheme-computer-systems.pdf",
+    paperCode: "H446/01", series: "June 2024",
+  },
+  {
+    topic: "Networks",
     excerptText: "One mark per protocol correctly identified, e.g.: HTTP (Hypertext Transfer "
       + "Protocol), HTTPS (HTTP Secure), TCP (Transmission Control Protocol), IP (Internet "
       + "Protocol), UDP (User Datagram Protocol), FTP (File Transfer Protocol), DHCP (Dynamic "

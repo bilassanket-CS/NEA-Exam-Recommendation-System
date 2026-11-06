@@ -51,6 +51,15 @@ test("every real excerpt has a working-looking OCR source URL", () => {
   }
 });
 
+test("findRelatedResource picks the hardware excerpt, not the protocols one, for a device question", () => {
+  // Regression: the Networks topic has two excerpts (hardware vs. protocols). A
+  // "which device routes packets" question must match the hardware excerpt, not
+  // just any excerpt tagged with the right topic.
+  const result = findRelatedResource("Networks", "Hardware Which device routes packets between multiple networks?");
+  assert.ok(result);
+  assert.match(result.excerptText, /Router/);
+});
+
 test("findRelatedResource finds the stacks/queues excerpt for a matching real question", () => {
   const result = findRelatedResource("Data Structures", "Explain the difference between a stack and a queue, giving one use of each.");
   assert.ok(result);

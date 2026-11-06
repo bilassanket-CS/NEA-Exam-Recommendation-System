@@ -75,8 +75,13 @@ export function submitAttempt(db, { studentId, questionId, answer, selfMarks, no
       const relatedResource = findRelatedResource(topic.name, queryText);
       if (relatedResource) result.relatedResource = relatedResource;
     }
-    const { students, questions, outcomes } = db.getOutcomesMatrix();
-    const similar = collaborativeRecommend({ students, questions, outcomes, targetStudent: studentId }, 3);
+    // Restricted to the SAME topic as the missed question: pure behavioural
+    // collaborative filtering (who-got-this-wrong-together) can otherwise
+    // surface a completely unrelated topic when attempt data is still sparse,
+    // which looks wrong even though the cosine-similarity math is correct.
+    const { students, outcomes } = db.getOutcomesMatrix();
+    const sameTopicQuestions = db.getQuestionIdsByTopic(question.topic_id);
+    const similar = collaborativeRecommend({ students, questions: sameTopicQuestions, outcomes, targetStudent: studentId }, 3);
     if (similar.length) result.similarQuestions = similar.map((s) => s.questionId);
   }
 

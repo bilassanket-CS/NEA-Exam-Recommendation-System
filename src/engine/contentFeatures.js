@@ -6,8 +6,22 @@
 
 import { cosineSimilarity } from "./collaborative.js";
 
+// Common English filler words, excluded so two texts that only share "the",
+// "is", "which" etc. don't register as meaningfully similar — without this,
+// short exam-question prompts can look deceptively close to an unrelated
+// excerpt just because of shared grammar, not shared subject matter.
+const STOPWORDS = new Set([
+  "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "has", "have", "had",
+  "he", "in", "is", "it", "its", "of", "on", "or", "that", "the", "to", "was", "were",
+  "will", "with", "which", "what", "who", "whom", "this", "these", "those", "do", "does",
+  "did", "i", "you", "your", "we", "they", "them", "their", "if", "but", "not", "no",
+  "can", "could", "would", "should", "each", "one", "all", "any", "about", "between",
+  "into", "than", "then", "there", "where", "when", "why", "how", "mark", "marks",
+]);
+
 export function tokenize(text) {
-  return String(text || "").toLowerCase().match(/[a-z0-9]+/g) || [];
+  const all = String(text || "").toLowerCase().match(/[a-z0-9]+/g) || [];
+  return all.filter((t) => !STOPWORDS.has(t));
 }
 
 /**
